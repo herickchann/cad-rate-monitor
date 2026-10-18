@@ -88,3 +88,12 @@
 .stepper-button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:8px}
 .stepper-button:disabled{opacity:.4;cursor:default}
 .settings-grid .secondary-button,#reset-settings{min-height:44px;padding:10px 14px;font-size:12px;border-radius:9px}
+
+/* CADar's original bird anchors the brand without crowding the dashboard. */
+.wordmark{gap:8px;font-size:24px;letter-spacing:-1px;line-height:1}
+.brand-mark{display:block;width:48px;height:48px;object-fit:contain;flex-shrink:0}
+.brand-mascot{display:block;width:112px;height:112px;object-fit:contain;flex-shrink:0;margin-right:6px}
+.update{align-items:center}
+.update .dot{margin-top:0;flex-shrink:0}
+@media(max-width:850px){.brand-mascot{width:88px;height:88px}.update{margin-top:20px}}
+@media(max-width:540px){.wordmark{font-size:23px}.brand-mark{width:44px;height:44px}.brand-mascot{width:80px;height:80px}.update{gap:8px;white-space:normal}}

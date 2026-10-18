@@ -1,6 +1,8 @@
-# CAD Rate Monitor
+# CADar
 
 [Open the live tracker](https://herickchann.github.io/cad-rate-monitor/)
+
+**Your Canadian-dollar radar.** CADar uses the original bird mascot chosen for the app.
 
 Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, historical charts with selectable time ranges, an amount converter, and built-in browser sound alerts.
 
@@ -18,7 +20,7 @@ Open **Settings** in the top-right corner and use **Your currencies** to turn GB
 
 ## Rearrange currency cards
 
-Drag a card by its **Move** handle to put it in a different position. On touchscreens, drag the same handle; the rest of the page scrolls normally. With a handle focused, arrow keys move the card earlier or later, and Home/End move it first or last. Escape cancels an active drag. Card order is saved with browser preferences and survives refreshes, hiding currencies, and reopening. Card colours stay with their currencies. Reset browser settings restores the default order.
+Drag a card by its floating grip handle to put it in a different position. On touchscreens, drag the same handle; the rest of the page scrolls normally. With a handle focused, arrow keys move the card earlier or later, and Home/End move it first or last. Escape cancels an active drag. Card order is saved with browser preferences and survives refreshes, hiding currencies, and reopening. Card colours stay with their currencies. Reset browser settings restores the default order.
 
 ## Chart ranges and table pagination
 
