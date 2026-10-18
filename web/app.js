@@ -444,17 +444,11 @@ function changedSettings() {
 $('rate-source').addEventListener('change', event => {
   settings.source = event.target.value; $('alert-banner').hidden = true; changedSettings();
 });
-for (const input of document.querySelectorAll('[data-vbce-target]')) {
-  input.addEventListener('input', () => {
-    if (!input.checkValidity()) return;
-    settings.vbceTargets[input.dataset.vbceTarget] = input.value.trim() ? input.valueAsNumber : 0;
-    savePreferences(); if (data) { render(); checkAlerts(); } alertStatus();
-  });
-  input.addEventListener('change', () => {
-    if (!input.checkValidity()) { input.reportValidity(); return; }
-    changedSettings();
-  });
-}
+for (const input of document.querySelectorAll('[data-vbce-target]')) input.addEventListener('change', () => {
+  if (!input.checkValidity()) { input.reportValidity(); return; }
+  settings.vbceTargets[input.dataset.vbceTarget] = input.value.trim() ? input.valueAsNumber : 0;
+  changedSettings();
+});
 $('amount').addEventListener('input', () => {
   convert();
   const amount = $('amount').valueAsNumber;
