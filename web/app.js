@@ -1,10 +1,41 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const currencies = ['GBP', 'EUR', 'USD'];
-const symbols = { GBP: '£', EUR: '€', USD: 'US$' };
-const money = (currency, amount, digits = 2) => new Intl.NumberFormat('en-CA', { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount);
+const currencies = ['GBP', 'EUR', 'USD', 'JPY'];
+const currencyNames = { GBP: 'British pound', EUR: 'Euro', USD: 'US dollar', JPY: 'Japanese yen' };
+const symbols = { GBP: '£', EUR: '€', USD: 'US$', JPY: '¥' };
+const money = (currency, amount, digits = currency === 'JPY' ? 0 : 2) => new Intl.NumberFormat('en-CA', { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount);
 const dayLabel = date => new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(date + 'T12:00:00Z'));
-let data, selected = 'GBP';
+const preferenceStorage = {
+  getItem: key => window.localStorage.getItem(key),
+  setItem: (key, value) => window.localStorage.setItem(key, value)
+};
+const restored = CurrencyPreferences.read(preferenceStorage, currencies);
+let data, enabled = restored.enabled, selected = restored.selected;
+
+function preferenceNote(canSave) {
+  $('preference-note').textContent = canSave
+    ? 'Remembered on this browser. Mac sound-alert settings are separate.'
+    : 'Browser storage is unavailable; choices apply to this visit only. Mac sound-alert settings are separate.';
+}
+
+function savePreferences() {
+  preferenceNote(CurrencyPreferences.save(preferenceStorage, enabled, selected));
+}
+
+function applyPreferences() {
+  if (!enabled.includes(selected)) selected = enabled[0] || null;
+  for (const c of currencies) {
+    const visible = enabled.includes(c);
+    $('card-' + c).hidden = !visible;
+    document.querySelector(`[data-toggle="${c}"]`).checked = visible;
+    document.querySelector(`[data-currency="${c}"]`).hidden = !visible;
+    document.querySelector(`[data-result-currency="${c}"]`).hidden = !visible;
+  }
+  document.querySelector('.rate-grid').dataset.count = String(enabled.length);
+  $('empty-currencies').hidden = enabled.length > 0;
+  for (const selector of ['.workspace', '.history', '.rate-note']) document.querySelector(selector).hidden = !enabled.length;
+}
+
 
 function isFresh(rate) {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Vancouver', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -22,7 +53,7 @@ function convert() {
 }
 
 function chart() {
-  if (!data) return;
+  if (!data || !selected) return;
   const r = data.rates[selected], points = r.history;
   const svg = $('chart');
   svg.replaceChildren();
@@ -67,7 +98,7 @@ function chart() {
 function render() {
   const dates = [...new Set(Object.values(data.rates).map(r => r.date))];
   $('rate-date').textContent = 'Rate date · ' + dates.map(dayLabel).join(' / ');
-  const stale = Object.values(data.rates).some(r => !isFresh(r));
+  const stale = enabled.some(c => !isFresh(data.rates[c]));
   $('notice').hidden = !stale;
   $('notice').textContent = 'These rates are more than four days old. Check the official source before converting; favourable-rate signals are paused.';
   for (const c of currencies) {
@@ -78,12 +109,17 @@ function render() {
     $('status-' + c).textContent = !fresh ? 'Data stale' : r.good ? 'Favourable' : 'Watching';
     $('status-' + c).className = 'badge' + (fresh && r.good ? ' good' : '');
   }
-  const recent = Object.fromEntries(Object.entries(data.rates).map(([c, r]) => [c, Object.fromEntries(r.recent)]));
-  const days = [...new Set(Object.values(data.rates).flatMap(r => r.recent.map(p => p[0])))].sort().reverse().slice(0, 10);
+  const recent = Object.fromEntries(enabled.map(c => [c, Object.fromEntries(data.rates[c].recent)]));
+  const days = [...new Set(enabled.flatMap(c => data.rates[c].recent.map(p => p[0])))].sort().reverse().slice(0, 10);
+  const head = $('history-head'), heading = document.createElement('tr'); head.replaceChildren();
+  for (const title of ['Rate date', ...enabled.map(c => currencyNames[c])]) {
+    const cell = document.createElement('th'); cell.scope = 'col'; cell.textContent = title; heading.appendChild(cell);
+  }
+  head.appendChild(heading);
   const body = $('history-body'); body.replaceChildren();
   for (const day of days) {
     const row = document.createElement('tr');
-    for (const text of [dayLabel(day), ...currencies.map(c => recent[c][day] === undefined ? '—' : money(c, recent[c][day], 4))]) {
+    for (const text of [dayLabel(day), ...enabled.map(c => recent[c][day] === undefined ? '—' : money(c, recent[c][day], 4))]) {
       const cell = document.createElement('td'); cell.textContent = text; row.appendChild(cell);
     }
     body.appendChild(row);
@@ -111,7 +147,15 @@ async function load() {
   }
 }
 $('amount').addEventListener('input', convert);
-for (const button of document.querySelectorAll('[data-currency]')) button.addEventListener('click', () => { selected = button.dataset.currency; chart(); });
+for (const button of document.querySelectorAll('[data-currency]')) button.addEventListener('click', () => {
+  selected = button.dataset.currency; savePreferences(); chart();
+});
+for (const toggle of document.querySelectorAll('[data-toggle]')) toggle.addEventListener('change', () => {
+  enabled = currencies.filter(c => document.querySelector(`[data-toggle="${c}"]`).checked);
+  applyPreferences(); savePreferences(); if (data) render();
+});
+preferenceNote(restored.canSave);
+applyPreferences();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 setInterval(load, 15 * 60 * 1000);
 load();

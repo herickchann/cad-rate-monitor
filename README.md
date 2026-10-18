@@ -2,7 +2,7 @@
 
 [Open the live tracker](https://herickchann.github.io/cad-rate-monitor/)
 
-Track how many British pounds, euros, and US dollars you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, 90-day charts, an amount converter, and optional audible alerts on macOS.
+Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, 90-day charts, an amount converter, and optional audible alerts on macOS.
 
 Higher foreign currency received per CAD is better. Published rates are indicative and exclude your provider's fees and spread.
 
@@ -11,6 +11,10 @@ Higher foreign currency received per CAD is better. Published rates are indicati
 GitHub Actions builds and publishes the site on pushes to `main`, on manual runs, and weekdays around **2:15 PM America/Vancouver**. Scheduled runs can be delayed. Holidays retain the last available fixing. The webpage polls its published data every 15 minutes while open and refreshes when you return to the tab.
 
 The public site uses `config.example.json`. Local changes to `config.json` affect only your Mac alerts. Site generation reads official market data and publishes only dashboard assets and rate data; local alert history, logs, generated reports, and machine-specific configuration are ignored by Git.
+
+## Currency switches
+
+Use **Your currencies** on the webpage to turn GBP, EUR, USD, and JPY on or off. This filters rate cards, chart tabs, converter results, and history columns. Choices and the selected chart currency are saved in local browser storage and restored after refresh or reopening. You can switch all currencies off. Preferences belong to this browser and are not synced to other devices or the Mac alert script. If storage is unavailable, switches work for the current visit and the page explains that choices cannot be saved.
 
 ## Favourable rate rules
 
@@ -60,6 +64,7 @@ Python 3.9+ on macOS or Linux:
 
 ```sh
 python3 -m unittest discover -s tests -v
+node --test tests/preferences.test.cjs  # Browser preference tests; requires Node.js
 python3 build_site.py
 python3 -m http.server 8000 --directory dist
 ```

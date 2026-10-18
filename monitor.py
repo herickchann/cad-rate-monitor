@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CAD buying GBP/EUR/USD: official daily data, local HTML report, audible alerts."""
+"""CAD buying GBP/EUR/USD/JPY: official daily data, local HTML report, audible alerts."""
 import argparse
 import datetime as dt
 import fcntl
@@ -14,8 +14,8 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = 'https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/'
-SERIES = {'GBP': 'FXGBPCAD', 'EUR': 'FXEURCAD', 'USD': 'FXUSDCAD'}
-NAMES = {'GBP': 'British pounds', 'EUR': 'euros', 'USD': 'US dollars'}
+SERIES = {'GBP': 'FXGBPCAD', 'EUR': 'FXEURCAD', 'USD': 'FXUSDCAD', 'JPY': 'FXJPYCAD'}
+NAMES = {'GBP': 'British pounds', 'EUR': 'euros', 'USD': 'US dollars', 'JPY': 'Japanese yen'}
 LOCAL = ZoneInfo('America/Vancouver')
 
 
@@ -106,7 +106,7 @@ def alert(message, config, test=False):
 
 
 def report(results, now, config, error=None):
-    symbol = {'GBP': '£', 'EUR': '€', 'USD': 'US$'}
+    symbol = {'GBP': '£', 'EUR': '€', 'USD': 'US$', 'JPY': '¥'}
     rows = []
     comparisons = []
     recent = []
@@ -138,7 +138,7 @@ th,td{{padding:13px 12px;text-align:right;border-bottom:1px solid #e3e9ef;white-
 th:first-child,td:first-child{{text-align:left}}th{{color:#546270;font-size:13px;background:#f7f9fb}}
 .good{{color:#087a4b;font-weight:700}}.error{{background:#fff0e6;padding:14px;border-radius:8px}}a{{color:#125ac2}}
 </style><main><h1>Canadian dollar conversion tracker</h1>
-<p>Buying British pounds, euros, and US dollars with Canadian dollars. <strong>A higher rate means your CAD buys more.</strong></p>
+<p>Buying British pounds, euros, US dollars, and Japanese yen with Canadian dollars. <strong>A higher rate means your CAD buys more.</strong></p>
 <p class="muted">Checked {now.strftime('%B %d, %Y at %I:%M %p %Z')} · Rate date {data_date}<br>
 Scheduled weekdays at 2:00 PM Vancouver time, with a catch-up check after waking or signing in. Refresh this page to see saved updates.</p>
 {banner}<h2>Latest rates</h2><div class="scroll"><table><thead><tr><th>Currency</th><th>1 CAD buys</th>
