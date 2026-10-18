@@ -1,6 +1,6 @@
 # CADar
 
-[Open the live tracker](https://herickchann.github.io/cadar/)
+[Open the live tracker](https://cadar.codekino.org/)
 
 **Your Canadian-dollar radar.** CADar uses a simple C-shaped radar icon. The original bird mascot appears quietly at the bottom of Settings.
 
