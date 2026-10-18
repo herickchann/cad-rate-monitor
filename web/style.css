@@ -35,14 +35,6 @@
 
 .alert-setup .button,.converter button.button{border:0;justify-content:center}.secondary-button:disabled{opacity:.45;cursor:default}.alerts-trigger[data-active="true"] .alerts-state{background:var(--button);color:var(--button-text)}
 
-/* Keep table controls consistent with the selected dashboard theme. */
-.history-filter,.page-size-control{position:relative}
-.history-filter::after,.page-size-control::after{content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);transform:translateY(-70%) rotate(45deg);pointer-events:none}
-.history-filter select,.page-size-control select{appearance:none;-webkit-appearance:none;background:var(--toggle-bg);color:var(--ink);border:1px solid var(--line);border-radius:9px;min-height:38px;padding:8px 36px 8px 13px;font-size:12px;font-weight:600;line-height:1.4;cursor:pointer;transition:border-color .15s,box-shadow .15s}
-.history-filter select:hover,.page-size-control select:hover{border-color:var(--accent)}
-.history-filter select:focus-visible,.page-size-control select:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-color:var(--accent)}
-.history-filter select option,.page-size-control select option{background:var(--field);color:var(--ink);font-weight:400}
-
 .card-toolbar{display:flex;justify-content:flex-end;margin:-14px -14px 8px 0}
 .card-move{display:inline-flex;align-items:center;gap:4px;min-height:28px;border:1px solid transparent;border-radius:6px;padding:4px 7px;background:transparent;color:inherit;font-size:10px;line-height:1;cursor:grab;touch-action:none;opacity:.8}
 .card-move:hover,.card-move:focus-visible{opacity:1;border-color:currentColor}
@@ -51,3 +43,16 @@
 .rate-card.is-dragging{opacity:.55;outline:2px dashed var(--accent);outline-offset:3px}
 .reordering-cards,.reordering-cards .card-move{cursor:grabbing;user-select:none;-webkit-user-select:none}
 @media(pointer:coarse){.card-move{min-height:40px;min-width:68px}.card-toolbar{margin-top:-12px}}
+
+.site-select{position:relative;min-width:0}
+.site-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:20px;width:100%;min-height:38px;padding:8px 13px;border:1px solid var(--line);border-radius:9px;background:var(--toggle-bg);color:var(--ink);font:600 12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;text-align:left}
+.site-select-trigger:hover,.site-select-trigger[aria-expanded="true"]{border-color:var(--accent)}
+.site-select-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.site-select-arrow{width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);flex-shrink:0}
+.site-select-trigger[aria-expanded="true"] .site-select-arrow{transform:translateY(2px) rotate(225deg)}
+.site-select-menu{position:fixed;z-index:50;overflow-y:auto;overscroll-behavior:contain;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:5px;box-shadow:0 10px 30px #0002}
+.site-select-option{position:relative;min-height:38px;display:flex;align-items:center;padding:9px 32px 9px 11px;border-radius:7px;font-size:12px;line-height:1.4;cursor:pointer}
+.site-select-option:hover,.site-select-option.is-active{background:var(--toggle-bg)}
+.site-select-option[aria-selected="true"]{font-weight:650;color:var(--accent)}
+.site-select-option[aria-selected="true"]::after{content:"✓";position:absolute;right:11px}
+@media(max-width:540px){.history-filter .site-select{flex:1;max-width:190px}.site-select-option{min-height:44px}}
