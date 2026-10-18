@@ -6,5 +6,13 @@
   "sound": "/System/Library/Sounds/Ping.aiff",
   "sound_repeats": 5,
   "speak_alert": true,
-  "example_cad_amount": 1000
+  "example_cad_amount": 1000,
+  "notification_currencies": [
+    "GBP",
+    "EUR",
+    "USD",
+    "JPY"
+  ],
+  "desktop_notifications": true,
+  "sound_enabled": true
 }

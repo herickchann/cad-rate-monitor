@@ -97,6 +97,54 @@ class RateTests(unittest.TestCase):
             self.assertIn('USD per CAD', page)
             self.assertIn('Network unavailable', page)
 
+    def test_disabled_notification_currencies_do_not_consume_alerts(self):
+        configs = [
+            {**CONFIG, 'notification_currencies': []},
+            {**CONFIG, 'desktop_notifications': False, 'sound_enabled': False, 'speak_alert': False}
+        ]
+        for config in configs:
+            with self.subTest(config=config), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                (root / 'config.json').write_text(json.dumps(config))
+                with patch.object(monitor, 'ROOT', root), patch('sys.argv', ['monitor']), patch.object(monitor, 'fetch', return_value=self.rows), patch.object(monitor, 'analyse', return_value=analyse(self.rows, self.today, CONFIG)), patch.object(monitor, 'report'), patch.object(monitor, 'alert') as sound, patch('builtins.print'):
+                    self.assertEqual(monitor.main(), 0)
+                    sound.assert_not_called()
+                self.assertFalse(json.loads((root / 'state.json').read_text()).get('alerts'))
+
+    def test_settings_import_merges_without_changing_history_or_checking_rates(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            original = {**CONFIG, 'sound': '/custom/alert.aiff'}
+            history = {'alerts': {'GBP': {'last_alert_rate': .5}}}
+            (root / 'config.json').write_text(json.dumps(original))
+            (root / 'state.json').write_text(json.dumps(history))
+            downloaded = root / 'download.json'
+            downloaded.write_text(json.dumps({'notification_currencies': ['JPY'], 'sound_enabled': False, 'desktop_notifications': True, 'example_cad_amount': 2500}))
+            with patch.object(monitor, 'ROOT', root), patch('sys.argv', ['monitor', '--import-settings', str(downloaded)]), patch.object(monitor, 'fetch') as fetch, patch('builtins.print'):
+                self.assertEqual(monitor.main(), 0)
+                fetch.assert_not_called()
+            saved = json.loads((root / 'config.json').read_text())
+            self.assertEqual(saved['notification_currencies'], ['JPY'])
+            self.assertEqual(saved['sound'], original['sound'])
+            self.assertFalse(saved['sound_enabled'])
+            self.assertEqual(json.loads((root / 'state.json').read_text()), history)
+
+    def test_import_rejects_invalid_currencies_channels_ranges_and_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            file = Path(folder) / 'settings.json'
+            for bad in [{'notification_currencies':['XYZ']}, {'sound_enabled':'false'}, {'near_90_day_high_percent':99}, {'sound':'/unexpected/path'}]:
+                file.write_text(json.dumps(bad))
+                with self.subTest(settings=bad), self.assertRaises(ValueError):
+                    monitor.import_settings(file, CONFIG)
+
+    def test_desktop_only_delivery_does_not_play_audio(self):
+        config = {**CONFIG, 'sound_enabled':False, 'speak_alert':False, 'desktop_notifications':True}
+        with patch.object(monitor.subprocess, 'run') as run:
+            run.return_value.returncode = 0
+            monitor.alert('Test', config, test=True)
+            self.assertEqual(run.call_count, 1)
+            self.assertEqual(run.call_args.args[0][0], '/usr/bin/osascript')
+
 
 if __name__ == '__main__':
     unittest.main()

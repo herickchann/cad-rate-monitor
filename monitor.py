@@ -5,6 +5,7 @@ import datetime as dt
 import fcntl
 import html
 import json
+import math
 from pathlib import Path
 import subprocess
 import sys
@@ -78,31 +79,62 @@ def eligible(result, previous, now, config):
     return elapsed >= dt.timedelta(days=config['repeat_after_days']) or improved
 
 
+def channels_enabled(config):
+    return any(config.get(key, default) for key, default in [('desktop_notifications', True), ('sound_enabled', True), ('speak_alert', True)])
+
+
+def import_settings(path, config):
+    incoming = json.loads(Path(path).read_text())
+    if not isinstance(incoming, dict):
+        raise ValueError('Settings must be a JSON object.')
+    ranges = {'near_90_day_high_percent': (0, 10), 'above_30_day_average_percent': (0, 25),
+              'repeat_after_days': (1, 30), 'improvement_since_alert_percent': (0, 25), 'example_cad_amount': (0, 1e9)}
+    booleans = {'desktop_notifications', 'sound_enabled', 'speak_alert'}
+    allowed = set(ranges) | booleans | {'notification_currencies'}
+    if set(incoming) - allowed:
+        raise ValueError('Unsupported settings: ' + ', '.join(sorted(set(incoming) - allowed)))
+    for key, value in incoming.items():
+        if key in ranges:
+            low, high = ranges[key]
+            if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
+                raise ValueError(f'{key} must be between {low} and {high}.')
+        elif key in booleans and not isinstance(value, bool):
+            raise ValueError(f'{key} must be true or false.')
+        elif key == 'notification_currencies':
+            if not isinstance(value, list) or any(not isinstance(c, str) or c not in SERIES for c in value):
+                raise ValueError('notification_currencies must contain only GBP, EUR, USD, or JPY.')
+            incoming[key] = list(dict.fromkeys(value))
+    return {**config, **incoming}
+
+
 def alert(message, config, test=False):
     title = 'CAD rate alert test' if test else 'Favourable CAD conversion rate'
-    # JSON strings are valid AppleScript quoted strings for these plain notification messages.
-    script = f'display notification {json.dumps(message)} with title {json.dumps(title)}'
-    notification = subprocess.run(['/usr/bin/osascript', '-e', script], capture_output=True, text=True)
     failures = []
-    if notification.returncode:
-        failures.append('Desktop notification: ' + notification.stderr.strip())
-    played = False
-    for index in range(config['sound_repeats']):
-        sound = subprocess.run(['/usr/bin/afplay', config['sound']], capture_output=True, text=True)
-        played = played or sound.returncode == 0
-        if sound.returncode:
-            failures.append('Sound: ' + sound.stderr.strip())
-            break
-        if index < config['sound_repeats'] - 1:
-            time.sleep(1)
-    if config.get('speak_alert'):
+    delivered = False
+    if config.get('desktop_notifications', True):
+        script = f'display notification {json.dumps(message)} with title {json.dumps(title)}'
+        notification = subprocess.run(['/usr/bin/osascript', '-e', script], capture_output=True, text=True)
+        delivered = notification.returncode == 0
+        if notification.returncode:
+            failures.append('Desktop notification: ' + notification.stderr.strip())
+    if config.get('sound_enabled', True):
+        for index in range(config['sound_repeats']):
+            sound = subprocess.run(['/usr/bin/afplay', config['sound']], capture_output=True, text=True)
+            delivered = delivered or sound.returncode == 0
+            if sound.returncode:
+                failures.append('Sound: ' + sound.stderr.strip())
+                break
+            if index < config['sound_repeats'] - 1:
+                time.sleep(1)
+    if config.get('speak_alert', True):
         voice = subprocess.run(['/usr/bin/say', message], capture_output=True, text=True)
+        delivered = delivered or voice.returncode == 0
         if voice.returncode:
             failures.append('Speech: ' + voice.stderr.strip())
     for failure in failures:
         print(failure, file=sys.stderr)
-    if not played:
-        raise RuntimeError('The audible alert could not play. Check the Mac audio output.')
+    if not delivered:
+        raise RuntimeError('No enabled alert channel succeeded. Check your notification and audio settings.')
 
 
 def report(results, now, config, error=None):
@@ -175,6 +207,7 @@ def fetch(today):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--import-settings', metavar='FILE', help='Import settings downloaded from the website without checking rates')
     parser.add_argument('--test-alert', action='store_true', help='Play a labelled test without fetching rates')
     parser.add_argument('--scheduled', action='store_true', help='Run the weekday update when due in Vancouver time')
     parser.add_argument('--no-alert', action='store_true', help='Refresh report without sounding or consuming an alert')
@@ -184,7 +217,18 @@ def main():
     if not config_path.exists():
         config_path = ROOT / 'config.example.json'
     config = json.loads(config_path.read_text())
+    if args.import_settings:
+        try:
+            updated = import_settings(args.import_settings, config)
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
+        save_json(ROOT / 'config.json', updated)
+        print('Mac alert settings imported. They apply to the next check; existing alert history is preserved.')
+        return 0
     if args.test_alert:
+        if not channels_enabled(config):
+            print('All alert delivery channels are off. Enable notifications, sound, or speech before testing.')
+            return 0
         alert('This is a test of your Canadian dollar conversion alert.', config, test=True)
         print('Audio test completed. Confirm that you heard it on your Mac.')
         return 0
@@ -201,7 +245,7 @@ def main():
         try:
             results = analyse(fetch(now.date()), now.date(), config)
             report(results, now, config)
-            candidates = [r for c, r in results.items() if eligible(r, state.get('alerts', {}).get(c, {}), now, config)]
+            candidates = [r for c, r in results.items() if channels_enabled(config) and c in config.get('notification_currencies', SERIES) and eligible(r, state.get('alerts', {}).get(c, {}), now, config)]
             state.update({'last_checked': now.isoformat(), 'results': results, 'last_error': None})
             if candidates and not args.no_alert:
                 amount = config['example_cad_amount']

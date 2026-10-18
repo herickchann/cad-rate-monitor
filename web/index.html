@@ -7,13 +7,14 @@
   <meta name="theme-color" content="#163e35">
   <title>CAD Rate Monitor · GBP, EUR, USD &amp; JPY</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=yen-preferences">
-  <script src="preferences.js?v=yen-preferences" defer></script>
-  <script src="app.js?v=yen-preferences" defer></script>
+  <link rel="stylesheet" href="style.css?v=settings-themes">
+  <script src="preferences.js?v=settings-themes" defer></script>
+  <script src="alerts.js?v=settings-themes" defer></script>
+  <script src="app.js?v=settings-themes" defer></script>
 </head>
 <body>
 <div class="page">
-  <header><a class="wordmark" href="./" aria-label="CAD Rate Monitor home"><span class="mark">C$</span> CAD Rate Monitor</a><a class="source-link" href="https://github.com/herickchann/cad-rate-monitor">View on GitHub <span aria-hidden="true">↗</span></a></header>
+  <header><a class="wordmark" href="./" aria-label="CAD Rate Monitor home"><span class="mark">C$</span> CAD Rate Monitor</a></header>
   <main>
     <div class="intro"><div><p class="eyebrow">CANADIAN DOLLAR → GBP, EUR, USD &amp; JPY</p><h1>Make your dollars<br>go a little further.</h1><p class="lede">A daily look at what your Canadian dollars buy.<br class="desktop"> Higher rates mean more pounds, euros, US dollars, and yen in your pocket.</p></div><div class="update"><span class="dot"></span><div><strong>Bank of Canada daily rates</strong><p id="rate-date">Loading latest rates…</p></div></div></div>
     <div id="notice" class="notice" role="status" hidden></div>
@@ -27,6 +28,50 @@
         <label><input type="checkbox" data-toggle="JPY" aria-label="Show Japanese yen (JPY)" checked><span>JPY <small>Japanese yen</small></span></label>
       </fieldset>
     </section>
+    <details class="settings-panel panel" id="settings-panel">
+      <summary>Settings &amp; notifications <span class="small">Themes, alerts, and display</span></summary>
+      <p class="small">All settings are remembered on this browser. Showing a currency and receiving alerts for it are separate choices.</p>
+      <div class="settings-grid">
+        <fieldset><legend>Appearance &amp; display</legend>
+          <label for="setting-theme">Theme</label><select id="setting-theme"><option value="forest">Forest light</option><option value="dark">Midnight dark</option><option value="ocean">Ocean blue</option><option value="system">Match device</option></select>
+          <label for="setting-amount">Default CAD amount</label><input id="setting-amount" required type="number" min="0" max="1000000000" step="any" value="1000">
+          <label for="setting-precision">Rate decimal places</label><select id="setting-precision"><option value="2">2</option><option value="4" selected>4</option><option value="6">6</option></select>
+          <label for="setting-refresh">Refresh published rates</label><select id="setting-refresh"><option value="0">Manual only</option><option value="5">Every 5 minutes</option><option value="15" selected>Every 15 minutes</option><option value="30">Every 30 minutes</option><option value="60">Every hour</option></select>
+          <p class="small">The Bank of Canada publishes daily averages; checking more often does not make them live market quotes.</p>
+          <label class="setting-check"><input type="checkbox" id="setting-history" checked> Show recent rate history</label>
+          <button type="button" class="secondary-button" id="refresh-now">Refresh now</button>
+        </fieldset>
+        <fieldset><legend>Notifications for each currency</legend>
+          <div class="notification-currencies">
+            <label class="setting-check"><input type="checkbox" data-notify="GBP" aria-label="Notify for British pound (GBP)" checked> GBP · British pound</label>
+            <label class="setting-check"><input type="checkbox" data-notify="EUR" aria-label="Notify for euro (EUR)" checked> EUR · Euro</label>
+            <label class="setting-check"><input type="checkbox" data-notify="USD" aria-label="Notify for US dollar (USD)" checked> USD · US dollar</label>
+            <label class="setting-check"><input type="checkbox" data-notify="JPY" aria-label="Notify for Japanese yen (JPY)" checked> JPY · Japanese yen</label>
+          </div>
+          <label class="setting-check"><input type="checkbox" id="setting-notifications"> Desktop notifications</label>
+          <label class="setting-check"><input type="checkbox" id="setting-sound"> Play a sound</label>
+          <label for="setting-volume">Sound volume</label><input id="setting-volume" type="range" min="5" max="100" value="50">
+          <div class="settings-actions"><button type="button" class="secondary-button" id="enable-audio">Enable sound for this visit</button><button type="button" class="secondary-button" id="test-alert">Test alert</button></div>
+          <p id="alert-status" class="small" role="status">Browser alerts are off. Choose a delivery option above.</p>
+          <p class="small">Browser alerts require this page to stay open. Sound needs a click to enable it after reopening; background tabs may pause checks. Desktop notifications also require browser permission.</p>
+        </fieldset>
+        <fieldset><legend>What counts as favourable</legend>
+          <label for="setting-near-high">Within this % of the 90-day best</label><input id="setting-near-high" required type="number" min="0" max="10" step="0.1" value="0.5">
+          <label for="setting-above-average">Or this % above the 30-day average</label><input id="setting-above-average" required type="number" min="0" max="25" step="0.1" value="2">
+          <label for="setting-reminder">Repeat reminder after</label><select id="setting-reminder"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
+          <p class="small">The same published rate never alerts twice. A new fixing can alert sooner if it improves another 1%. Data more than four days old cannot trigger an alert.</p>
+          <p class="small">These settings update the webpage’s favourable labels and browser alerts. They compare history and do not predict future rates.</p>
+        </fieldset>
+        <fieldset><legend>Mac alerts with the page closed</legend>
+          <p class="small">The installed Mac script runs separately. Download and import these settings to apply your currency choices, thresholds, and delivery preferences to it.</p>
+          <label class="setting-check"><input type="checkbox" id="setting-mac-speech" checked> Read Mac alerts aloud</label>
+          <button type="button" class="secondary-button" id="download-mac-settings">Download Mac alert settings</button>
+          <p class="small">The downloaded file does not change the Mac script until you import it. Your Mac must still be on, signed in, and connected to the tracker’s drive.</p>
+          <button type="button" class="secondary-button" id="reset-settings">Reset browser settings</button>
+        </fieldset>
+      </div>
+    </details>
+    <div id="alert-banner" class="alert-banner" role="status" hidden></div>
     <p id="empty-currencies" class="empty-currencies" role="status" hidden>All currencies are switched off. Turn one on above to see its rates, chart, and conversion.</p>
     <section class="rate-grid" aria-label="Latest conversion rates">
       <article class="rate-card" id="card-GBP"><div class="card-top"><span class="currency-icon">£</span><div><h2>British pound</h2><p>GBP per Canadian dollar</p></div><span class="badge" id="status-GBP">Loading</span></div><p class="big-rate" id="rate-GBP">—</p><p class="daily" id="change-GBP">1 CAD buys the rate above</p><div class="card-foot"><span>CAD $1,000 buys</span><strong id="example-GBP">—</strong></div></article>
@@ -40,9 +85,9 @@
       <div class="converter panel"><p class="eyebrow">PLAN YOUR CONVERSION</p><h2>What would you get?</h2><label for="amount">Amount in Canadian dollars</label><div class="amount-field"><span>C$</span><input type="number" id="amount" value="1000" min="0" max="1000000000" step="any" inputmode="decimal"></div><p id="amount-error" class="input-error" hidden>Enter an amount from $0 to $1 billion.</p><div class="conversion-result"><div data-result-currency="GBP"><span>British pounds</span><strong id="convert-GBP">—</strong></div><div data-result-currency="EUR"><span>Euros</span><strong id="convert-EUR">—</strong></div><div data-result-currency="USD"><span>US dollars</span><strong id="convert-USD">—</strong></div><div data-result-currency="JPY"><span>Japanese yen</span><strong id="convert-JPY">—</strong></div></div><p class="small">Your provider’s fees and exchange spread will reduce the amount received.</p><a class="button" href="https://github.com/herickchann/cad-rate-monitor#mac-sound-alerts">Get sound alerts on your Mac <span aria-hidden="true">↗</span></a><p class="small">The optional local script plays five pings and speaks the result when a rate qualifies.</p></div>
     </section>
     <section class="history panel"><div class="section-top"><div><p class="eyebrow">RECENT FIXINGS</p><h2>The last 10 rate days</h2></div><span class="small">Foreign currency per CAD</span></div><div class="table-scroll"><table><thead id="history-head"><tr><th scope="col">Rate date</th><th scope="col">British pound</th><th scope="col">Euro</th><th scope="col">US dollar</th><th scope="col">Japanese yen</th></tr></thead><tbody id="history-body"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section>
-    <details class="method"><summary>What counts as a favourable rate?</summary><p>A currency is marked favourable when the amount bought per CAD is within <strong>0.5% of its best rate over the past 90 calendar days</strong>, or at least <strong>2% above its preceding 30-day average</strong>. A higher amount received per CAD is better.</p><p>This compares recent rates; it does not predict what happens next. Data more than four calendar days old is marked stale and cannot trigger a favourable-rate signal.</p><p>The website refresh is scheduled for weekdays around 2:15 PM Vancouver time. Publishing can be delayed. Holidays retain the last available fixing. The Mac script runs independently; opening this webpage does not enable background sound alerts.</p></details>
+    <details class="method"><summary>What counts as a favourable rate?</summary><p>A currency is marked favourable when the amount bought per CAD is within <strong><span id="rule-near-high">0.5</span>% of its best rate over the past 90 calendar days</strong>, or at least <strong><span id="rule-above-average">2</span>% above its preceding 30-day average</strong>. A higher amount received per CAD is better.</p><p>This compares recent rates; it does not predict what happens next. Data more than four calendar days old is marked stale and cannot trigger a favourable-rate signal.</p><p>The website refresh is scheduled for weekdays around 2:15 PM Vancouver time. Publishing can be delayed. Holidays retain the last available fixing. The Mac script runs independently; browser alerts run only while the page is open. Use the Mac script for alerts when the page is closed.</p></details>
   </main>
-  <footer><p>Built around the Canadian dollar.</p><div><a href="https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/">Official rate source ↗</a><a href="https://github.com/herickchann/cad-rate-monitor">Source code ↗</a></div><p id="built-at" class="small"></p></footer>
+  <footer><p>Built around the Canadian dollar.</p><div><a href="https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/">Official rate source ↗</a></div><p id="built-at" class="small"></p></footer>
 </div>
 </body>
 </html>
