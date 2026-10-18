@@ -1,0 +1,12 @@
+config.json
+state.json
+report.html
+*.log
+.monitor.lock
+*.tmp
+*.pyc
+__pycache__/
+.DS_Store
+dist/
+ca.herick.cad-rate-monitor.plist
+README.txt

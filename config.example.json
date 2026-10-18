@@ -1,0 +1,10 @@
+{
+  "near_90_day_high_percent": 0.5,
+  "above_30_day_average_percent": 2.0,
+  "repeat_after_days": 7,
+  "improvement_since_alert_percent": 1.0,
+  "sound": "/System/Library/Sounds/Ping.aiff",
+  "sound_repeats": 5,
+  "speak_alert": true,
+  "example_cad_amount": 1000
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Track how much your Canadian dollars buy in British pounds and euros, with official rates, 90-day trends and favourable-rate signals.">
+  <meta name="theme-color" content="#163e35">
+  <title>CAD Rate Monitor · Pounds &amp; Euros</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<div class="page">
+  <header><a class="wordmark" href="./" aria-label="CAD Rate Monitor home"><span class="mark">C$</span> CAD Rate Monitor</a><a class="source-link" href="https://github.com/herickchann/cad-rate-monitor">View on GitHub <span aria-hidden="true">↗</span></a></header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">CANADIAN DOLLAR → GBP &amp; EUR</p><h1>Make your dollars<br>go a little further.</h1><p class="lede">A daily look at what your Canadian dollars buy.<br class="desktop"> Higher rates mean more pounds and euros in your pocket.</p></div><div class="update"><span class="dot"></span><div><strong>Bank of Canada daily rates</strong><p id="rate-date">Loading latest rates…</p></div></div></div>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <noscript><p class="notice">Enable JavaScript to display rates and use the converter. Official rates are also available from the <a href="https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/">Bank of Canada</a>.</p></noscript>
+    <section class="rate-grid" aria-label="Latest conversion rates">
+      <article class="rate-card" id="card-GBP"><div class="card-top"><span class="currency-icon">£</span><div><h2>British pound</h2><p>GBP per Canadian dollar</p></div><span class="badge" id="status-GBP">Loading</span></div><p class="big-rate" id="rate-GBP">—</p><p class="daily" id="change-GBP">1 CAD buys the rate above</p><div class="card-foot"><span>CAD $1,000 buys</span><strong id="example-GBP">—</strong></div></article>
+      <article class="rate-card" id="card-EUR"><div class="card-top"><span class="currency-icon">€</span><div><h2>Euro</h2><p>EUR per Canadian dollar</p></div><span class="badge" id="status-EUR">Loading</span></div><p class="big-rate" id="rate-EUR">—</p><p class="daily" id="change-EUR">1 CAD buys the rate above</p><div class="card-foot"><span>CAD $1,000 buys</span><strong id="example-EUR">—</strong></div></article>
+    </section>
+    <p class="rate-note">Daily averages, before fees and provider spreads. These are reference rates, not live transaction quotes.</p>
+    <section class="workspace">
+      <div class="trend panel"><div class="section-top"><div><p class="eyebrow">THE BIGGER PICTURE</p><h2>The past 90 days</h2></div><div class="tabs" role="group" aria-label="Chart currency"><button type="button" data-currency="GBP" aria-pressed="true">GBP</button><button type="button" data-currency="EUR" aria-pressed="false">EUR</button></div></div><p class="chart-summary" id="chart-summary">Loading rate history…</p><svg id="chart" viewBox="0 0 680 245" role="img" aria-label="90-day exchange-rate trend"></svg><div class="chart-legend"><span><i class="legend-line"></i> Foreign currency per CAD</span><span><i class="legend-line dashed"></i> 30-day average</span></div><div class="chart-stats"><div><span>90-day best</span><strong id="chart-high">—</strong></div><div><span>30-day average</span><strong id="chart-average">—</strong></div><div><span>Versus average</span><strong id="chart-comparison">—</strong></div></div></div>
+      <div class="converter panel"><p class="eyebrow">PLAN YOUR CONVERSION</p><h2>What would you get?</h2><label for="amount">Amount in Canadian dollars</label><div class="amount-field"><span>C$</span><input type="number" id="amount" value="1000" min="0" max="1000000000" step="any" inputmode="decimal"></div><p id="amount-error" class="input-error" hidden>Enter an amount from $0 to $1 billion.</p><div class="conversion-result"><div><span>British pounds</span><strong id="convert-GBP">—</strong></div><div><span>Euros</span><strong id="convert-EUR">—</strong></div></div><p class="small">Your provider’s fees and exchange spread will reduce the amount received.</p><a class="button" href="https://github.com/herickchann/cad-rate-monitor#mac-sound-alerts">Get sound alerts on your Mac <span aria-hidden="true">↗</span></a><p class="small">The optional local script plays five pings and speaks the result when a rate qualifies.</p></div>
+    </section>
+    <section class="history panel"><div class="section-top"><div><p class="eyebrow">RECENT FIXINGS</p><h2>The last 10 rate days</h2></div><span class="small">Foreign currency per CAD</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Rate date</th><th scope="col">British pound</th><th scope="col">Euro</th></tr></thead><tbody id="history-body"><tr><td colspan="3">Loading…</td></tr></tbody></table></div></section>
+    <details class="method"><summary>What counts as a favourable rate?</summary><p>A currency is marked favourable when the amount bought per CAD is within <strong>0.5% of its best rate over the past 90 calendar days</strong>, or at least <strong>2% above its preceding 30-day average</strong>. A higher amount received per CAD is better.</p><p>This compares recent rates; it does not predict what happens next. Data more than four calendar days old is marked stale and cannot trigger a favourable-rate signal.</p><p>The website refresh is scheduled for weekdays around 2:15 PM Vancouver time. Publishing can be delayed. Holidays retain the last available fixing. The Mac script runs independently; opening this webpage does not enable background sound alerts.</p></details>
+  </main>
+  <footer><p>Built around the Canadian dollar.</p><div><a href="https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/">Official rate source ↗</a><a href="https://github.com/herickchann/cad-rate-monitor">Source code ↗</a></div><p id="built-at" class="small"></p></footer>
+</div>
+</body>
+</html>
