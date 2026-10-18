@@ -1,6 +1,6 @@
 # CADar
 
-[Open the live tracker](https://herickchann.github.io/cad-rate-monitor/)
+[Open the live tracker](https://herickchann.github.io/cadar/)
 
 **Your Canadian-dollar radar.** CADar uses a simple C-shaped radar icon. The original bird mascot appears quietly at the bottom of Settings.
 
@@ -58,8 +58,8 @@ These are comparisons with recent history, not a forecast. Rates over four calen
 Requires macOS and Python 3.9 or newer. No third-party Python packages are needed.
 
 ```sh
-git clone https://github.com/herickchann/cad-rate-monitor.git
-cd cad-rate-monitor
+git clone https://github.com/herickchann/cadar.git
+cd cadar
 python3 install_macos.py
 python3 monitor.py --test-alert
 ```
