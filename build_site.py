@@ -14,11 +14,11 @@ def build(output=None):
     output.mkdir(parents=True, exist_ok=True)
     now = dt.datetime.now(LOCAL)
     config = json.loads((ROOT / 'config.example.json').read_text())
-    observations = fetch(now.date())
+    observations = fetch(now.date(), start_date=dt.date(2017, 1, 1))
     rates = analyse(observations, now.date(), config)
     for currency, result in rates.items():
         end = dt.date.fromisoformat(result['date'])
-        start = end - dt.timedelta(days=90)
+        start = dt.date(2017, 1, 1)
         result['history'] = [
             {'date': row['d'], 'rate': 1 / float(row[SERIES[currency]]['v'])}
             for row in observations
@@ -37,7 +37,7 @@ def build(output=None):
     for path in (ROOT / 'web').iterdir():
         if path.is_file():
             shutil.copy2(path, output / path.name)
-    (output / 'data.json').write_text(json.dumps(payload, indent=2) + '\n')
+    (output / 'data.json').write_text(json.dumps(payload, separators=(',', ':')) + '\n')
     (output / '.nojekyll').touch()
     print('Built public site with rate dates: ' + ', '.join(r['date'] for r in rates.values()))
     return payload

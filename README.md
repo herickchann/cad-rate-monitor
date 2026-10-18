@@ -2,7 +2,7 @@
 
 [Open the live tracker](https://herickchann.github.io/cad-rate-monitor/)
 
-Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, 90-day charts, an amount converter, and optional audible alerts on macOS.
+Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, historical charts with selectable time ranges, an amount converter, and optional audible alerts on macOS.
 
 Higher foreign currency received per CAD is better. Published rates are indicative and exclude your provider's fees and spread.
 
@@ -15,6 +15,12 @@ The public site uses `config.example.json`. Local changes to `config.json` affec
 ## Currency switches
 
 Open **Settings** in the top-right corner and use **Your currencies** to turn GBP, EUR, USD, and JPY on or off. This filters rate cards, chart tabs, converter results, and history columns. Choices and the selected chart currency are saved in local browser storage and restored after refresh or reopening. You can switch all currencies off. Preferences belong to this browser and are not synced to other devices or the Mac alert script. If storage is unavailable, switches work for the current visit and the page explains that choices cannot be saved.
+
+## Chart ranges and table pagination
+
+The chart has **1W, 1M, 3M, 6M, YTD, 1Y, and All** controls. Its high, average, and percentage change summarize the selected period. The daily-history table has its own range selector and shows newest fixings first, with 10, 25, 50, or 100 rows per page and numbered Previous/Next navigation. Range and page-size choices are saved with browser preferences. Changing the table range or visible currencies returns the table to page one.
+
+Ranges end on the latest published rate date, so weekends and holidays do not create empty leading periods. Months and years use calendar boundaries. **All** covers available Bank of Canada daily observations from 2017 onward. Only published rate days appear; missing currency observations show a dash. Alert qualification continues to use its configured 90-day-high and preceding-30-day-average rules, independently of the chart view.
 
 ## Settings and themes
 

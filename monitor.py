@@ -188,8 +188,8 @@ or at least {config['above_30_day_average_percent']:g}% above its preceding 30 d
     temporary.replace(ROOT / 'report.html')
 
 
-def fetch(today):
-    start = today - dt.timedelta(days=110)
+def fetch(today, start_date=None):
+    start = start_date or today - dt.timedelta(days=110)
     url = (f'https://www.bankofcanada.ca/valet/observations/{",".join(SERIES.values())}/json'
            f'?start_date={start.isoformat()}&end_date={today.isoformat()}')
     request = urllib.request.Request(url, headers={'User-Agent': 'CADRateMonitor/1.0', 'Accept': 'application/json'})

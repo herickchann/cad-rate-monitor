@@ -12,6 +12,8 @@ const preferenceStorage = {
 const restored = CurrencyPreferences.read(preferenceStorage, currencies);
 let data, enabled = restored.enabled, selected = restored.selected, settings = restored.settings;
 let refreshTimer, audioContext, checkingAlerts = false, loading = false;
+let historyPage = 1;
+const rangeTitles = {'1W':'The past week','1M':'The past month','3M':'The past 3 months','6M':'The past 6 months',YTD:'Year to date','1Y':'The past year',ALL:'All available history'};
 
 function preferenceNote(canSave) {
   $('preference-note').textContent = canSave
@@ -54,9 +56,37 @@ function convert() {
   for (const c of currencies) $('convert-' + c).textContent = valid ? money(c, amount * data.rates[c].rate) : '—';
 }
 
+function rangeStart(range, lastDate) {
+  if (range === 'ALL') return '0000-01-01';
+  const start = new Date(lastDate + 'T12:00:00Z');
+  if (range === '1W') start.setUTCDate(start.getUTCDate() - 7);
+  else if (range === 'YTD') start.setUTCMonth(0, 1);
+  else {
+    const months = {'1M':1,'3M':3,'6M':6,'1Y':12}[range] || 3;
+    const day = start.getUTCDate();
+    start.setUTCDate(1);
+    start.setUTCMonth(start.getUTCMonth() - months);
+    const lastDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
+    start.setUTCDate(Math.min(day, lastDay));
+  }
+  return start.toISOString().slice(0, 10);
+}
+
+function inRange(points, range, lastDate = points.at(-1)?.date) {
+  if (!lastDate) return [];
+  const first = rangeStart(range, lastDate);
+  return points.filter(point => point.date >= first && point.date <= lastDate);
+}
+
 function chart() {
   if (!data || !selected) return;
-  const r = data.rates[selected], points = r.history;
+  const r = data.rates[selected], points = inRange(r.history, settings.chartRange, r.date);
+  $('chart-title').textContent = rangeTitles[settings.chartRange];
+  for (const button of document.querySelectorAll('[data-chart-range]')) button.setAttribute('aria-pressed', String(button.dataset.chartRange === settings.chartRange));
+  if (!points.length) { $('chart').replaceChildren(); $('chart-summary').textContent = 'No published rates in this period.'; return; }
+  const periodHigh = Math.max(...points.map(p => p.rate));
+  const periodAverage = points.reduce((sum, p) => sum + p.rate, 0) / points.length;
+  const periodChange = (points.at(-1).rate / points[0].rate - 1) * 100;
   const svg = $('chart');
   svg.replaceChildren();
   const ns = 'http://www.w3.org/2000/svg';
@@ -68,14 +98,14 @@ function chart() {
     return el;
   };
   const width = 680, left = 49, right = 12, top = 19, bottom = 218;
-  const values = points.map(p => p.rate).concat(r.average30);
+  const values = points.map(p => p.rate);
   const low = Math.min(...values), high = Math.max(...values);
   const span = Math.max(high - low, high * .004);
   const min = low - span * .18, max = high + span * .18;
   const start = Date.parse(points[0].date), end = Date.parse(points.at(-1).date);
   const x = p => left + (Date.parse(p.date) - start) / Math.max(1, end - start) * (width - left - right);
   const y = value => bottom - (value - min) / (max - min) * (bottom - top);
-  add('title', {}, `${selected} per CAD over the last 90 calendar days`);
+  add('title', {}, `${selected} per CAD: ${dayLabel(points[0].date)} to ${dayLabel(points.at(-1).date)}`);
   for (let i = 0; i < 4; i++) {
     const value = min + (max - min) * i / 3, yy = y(value);
     add('line', { x1: left, x2: width - right, y1: yy, y2: yy, stroke: 'var(--chart-grid)', 'stroke-width': 1 });
@@ -83,18 +113,68 @@ function chart() {
   }
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(p).toFixed(2)},${y(p.rate).toFixed(2)}`).join(' ');
   add('path', { d: path + ` L${x(points.at(-1))},${bottom} L${left},${bottom} Z`, fill: 'var(--chart-fill)', opacity: .7 });
-  add('line', { x1: left, x2: width - right, y1: y(r.average30), y2: y(r.average30), stroke: 'var(--chart-average)', 'stroke-width': 1.4, 'stroke-dasharray': '5 5' });
+  add('line', { x1: left, x2: width - right, y1: y(periodAverage), y2: y(periodAverage), stroke: 'var(--chart-average)', 'stroke-width': 1.4, 'stroke-dasharray': '5 5' });
   add('path', { d: path, fill: 'none', stroke: 'var(--chart-line)', 'stroke-width': 2.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
-  add('circle', { cx: x(points.at(-1)), cy: y(r.rate), r: 4.5, fill: 'var(--chart-line)', stroke: 'var(--field)', 'stroke-width': 2 });
-  const shortDate = value => new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(value + 'T12:00:00Z'));
+  add('circle', { cx: x(points.at(-1)), cy: y(points.at(-1).rate), r: 4.5, fill: 'var(--chart-line)', stroke: 'var(--field)', 'stroke-width': 2 });
+  const multiYear = points[0].date.slice(0, 4) !== points.at(-1).date.slice(0, 4);
+  const shortDate = value => new Intl.DateTimeFormat('en-CA', { month: 'short', ...(multiYear ? {year:'numeric'} : {day:'numeric'}), timeZone: 'UTC' }).format(new Date(value + 'T12:00:00Z'));
   add('text', { x: left, y: 240, fill: 'var(--chart-label)', 'font-size': 10 }, shortDate(points[0].date));
   add('text', { x: width - right, y: 240, 'text-anchor': 'end', fill: 'var(--chart-label)', 'font-size': 10 }, shortDate(points.at(-1).date));
-  const distance = (1 - r.rate / r.high90) * 100;
-  $('chart-summary').textContent = distance < .005 ? `${selected} is at its best observed rate in this period.` : `${selected} is ${distance.toFixed(2)}% below its 90-day best.`;
-  $('chart-high').textContent = money(selected, r.high90, settings.precision);
-  $('chart-average').textContent = money(selected, r.average30, settings.precision);
-  $('chart-comparison').textContent = `${r.above_average_percent >= 0 ? '+' : ''}${r.above_average_percent.toFixed(2)}%`;
+  $('chart-summary').textContent = `${selected} ${periodChange >= 0 ? '+' : ''}${periodChange.toFixed(2)}% · ${dayLabel(points[0].date)} – ${dayLabel(points.at(-1).date)}`;
+  $('chart-high').textContent = money(selected, periodHigh, settings.precision);
+  $('chart-average').textContent = money(selected, periodAverage, settings.precision);
+  $('chart-comparison').textContent = `${periodChange >= 0 ? '+' : ''}${periodChange.toFixed(2)}%`;
   for (const button of document.querySelectorAll('[data-currency]')) button.setAttribute('aria-pressed', String(button.dataset.currency === selected));
+}
+
+function renderHistory() {
+  if (!data) return;
+  const lastDate = enabled.map(c => data.rates[c].date).sort().at(-1);
+  const start = lastDate ? rangeStart(settings.historyRange, lastDate) : '0000-01-01';
+  const histories = Object.fromEntries(enabled.map(c => [c, data.rates[c].history]));
+  const maps = Object.fromEntries(enabled.map(c => [c, Object.fromEntries(histories[c].map(p => [p.date, p.rate]))]));
+  const days = [...new Set(enabled.flatMap(c => histories[c].map(p => p.date)))].filter(day => day >= start && day <= lastDate).sort().reverse();
+  const pageCount = Math.max(1, Math.ceil(days.length / settings.pageSize));
+  historyPage = Math.max(1, Math.min(historyPage, pageCount));
+  const offset = (historyPage - 1) * settings.pageSize;
+  const visibleDays = days.slice(offset, offset + settings.pageSize);
+  const head = $('history-head'), heading = document.createElement('tr'); head.replaceChildren();
+  for (const title of ['Rate date', ...enabled.map(c => currencyNames[c])]) {
+    const cell = document.createElement('th'); cell.scope = 'col'; cell.textContent = title; heading.appendChild(cell);
+  }
+  head.appendChild(heading);
+  const body = $('history-body'); body.replaceChildren();
+  for (const day of visibleDays) {
+    const row = document.createElement('tr');
+    for (const text of [dayLabel(day), ...enabled.map(c => maps[c][day] === undefined ? '—' : money(c, maps[c][day], settings.precision))]) {
+      const cell = document.createElement('td'); cell.textContent = text; row.appendChild(cell);
+    }
+    body.appendChild(row);
+  }
+  if (!visibleDays.length) {
+    const row = document.createElement('tr'), cell = document.createElement('td');
+    cell.colSpan = enabled.length + 1; cell.textContent = 'No published rates in this period.'; row.appendChild(cell); body.appendChild(row);
+  }
+  $('history-caption').textContent = days.length ? `${dayLabel(days.at(-1))} – ${dayLabel(days[0])} · Foreign currency per CAD · Newest first` : 'Foreign currency per CAD · Newest first';
+  $('history-count').textContent = days.length ? `${offset + 1}–${offset + visibleDays.length} of ${days.length.toLocaleString('en-CA')} rate days` : 'No rates to display';
+  $('history-pagination').hidden = pageCount <= 1;
+  $('history-previous').disabled = historyPage <= 1;
+  $('history-next').disabled = historyPage >= pageCount;
+  const pages = [...new Set([1, historyPage - 1, historyPage, historyPage + 1, pageCount])].filter(page => page >= 1 && page <= pageCount).sort((a,b) => a-b);
+  const buttons = $('history-pages'); buttons.replaceChildren();
+  let previous = 0;
+  for (const page of pages) {
+    if (previous && page > previous + 1) {
+      const ellipsis = document.createElement('span'); ellipsis.textContent = '…'; ellipsis.setAttribute('aria-hidden','true'); buttons.appendChild(ellipsis);
+    }
+    const button = document.createElement('button'); button.type = 'button'; button.dataset.page = String(page); button.textContent = page;
+    button.setAttribute('aria-label', `Go to page ${page}`);
+    if (page === historyPage) button.setAttribute('aria-current', 'page');
+    button.addEventListener('click', () => {
+      historyPage = page; renderHistory(); $('history-pages').querySelector(`[data-page="${page}"]`)?.focus();
+    });
+    buttons.appendChild(button); previous = page;
+  }
 }
 
 function render() {
@@ -112,21 +192,7 @@ function render() {
     $('status-' + c).textContent = !fresh ? 'Data stale' : good ? 'Favourable' : 'Watching';
     $('status-' + c).className = 'badge' + (fresh && good ? ' good' : '');
   }
-  const recent = Object.fromEntries(enabled.map(c => [c, Object.fromEntries(data.rates[c].recent)]));
-  const days = [...new Set(enabled.flatMap(c => data.rates[c].recent.map(p => p[0])))].sort().reverse().slice(0, 10);
-  const head = $('history-head'), heading = document.createElement('tr'); head.replaceChildren();
-  for (const title of ['Rate date', ...enabled.map(c => currencyNames[c])]) {
-    const cell = document.createElement('th'); cell.scope = 'col'; cell.textContent = title; heading.appendChild(cell);
-  }
-  head.appendChild(heading);
-  const body = $('history-body'); body.replaceChildren();
-  for (const day of days) {
-    const row = document.createElement('tr');
-    for (const text of [dayLabel(day), ...enabled.map(c => recent[c][day] === undefined ? '—' : money(c, recent[c][day], settings.precision))]) {
-      const cell = document.createElement('td'); cell.textContent = text; row.appendChild(cell);
-    }
-    body.appendChild(row);
-  }
+  renderHistory();
   $('built-at').textContent = 'Last published · ' + new Intl.DateTimeFormat('en-CA', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Vancouver' }).format(new Date(data.updated_at)) + ' Vancouver time';
   convert(); chart();
 }
@@ -263,6 +329,8 @@ function initializeSettings() {
   for (const [id, value] of Object.entries({history:settings.showHistory,notifications:settings.notifications,sound:settings.sound,'mac-speech':settings.macSpeech})) $('setting-' + id).checked = value;
   for (const c of currencies) document.querySelector(`[data-notify="${c}"]`).checked = settings.notifyCurrencies.includes(c);
   $('amount').value = settings.amount;
+  $('history-range').value = settings.historyRange;
+  $('history-page-size').value = settings.pageSize;
   $('rule-near-high').textContent = settings.nearHigh;
   $('rule-above-average').textContent = settings.aboveAverage;
   applyTheme(); applyPreferences(); scheduleRefresh(); alertStatus();
@@ -285,6 +353,7 @@ for (const button of document.querySelectorAll('[data-currency]')) button.addEve
 });
 for (const toggle of document.querySelectorAll('[data-toggle]')) toggle.addEventListener('change', () => {
   enabled = currencies.filter(c => document.querySelector(`[data-toggle="${c}"]`).checked);
+  historyPage = 1;
   applyPreferences(); savePreferences(); if (data) render();
 });
 for (const toggle of document.querySelectorAll('[data-notify]')) toggle.addEventListener('change', () => {
@@ -339,7 +408,7 @@ $('download-mac-settings').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 $('reset-settings').addEventListener('click', () => {
-  enabled = [...currencies]; selected = currencies[0]; settings = CurrencyPreferences.defaultSettings(currencies);
+  enabled = [...currencies]; selected = currencies[0]; settings = CurrencyPreferences.defaultSettings(currencies); historyPage = 1;
   $('alert-banner').hidden = true; changedSettings();
 });
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (settings.theme === 'system') applyTheme(); });
@@ -367,3 +436,15 @@ settingsDialog.addEventListener('click', event => {
   const bounds = settingsDialog.getBoundingClientRect();
   if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) settingsDialog.close();
 });
+
+for (const button of document.querySelectorAll('[data-chart-range]')) button.addEventListener('click', () => {
+  settings.chartRange = button.dataset.chartRange; savePreferences(); chart();
+});
+$('history-range').addEventListener('change', event => {
+  settings.historyRange = event.target.value; historyPage = 1; savePreferences(); renderHistory();
+});
+$('history-page-size').addEventListener('change', event => {
+  settings.pageSize = Number(event.target.value); historyPage = 1; savePreferences(); renderHistory();
+});
+$('history-previous').addEventListener('click', () => { historyPage--; renderHistory(); });
+$('history-next').addEventListener('click', () => { historyPage++; renderHistory(); });

@@ -5,7 +5,8 @@ const CurrencyPreferences = (() => {
   function defaultSettings(currencies) {
     return { theme: 'forest', amount: 1000, refreshMinutes: 15, showHistory: true, precision: 4,
       notifications: false, sound: false, volume: .5, notifyCurrencies: [...currencies],
-      nearHigh: .5, aboveAverage: 2, reminderDays: 7, macSpeech: true };
+      nearHigh: .5, aboveAverage: 2, reminderDays: 7, macSpeech: true,
+      chartRange: '3M', historyRange: '3M', pageSize: 10 };
   }
   function settings(value, currencies) {
     const base = defaultSettings(currencies), v = value && typeof value === 'object' ? value : {};
@@ -21,7 +22,10 @@ const CurrencyPreferences = (() => {
       nearHigh: number(v.nearHigh, base.nearHigh, 0, 10),
       aboveAverage: number(v.aboveAverage, base.aboveAverage, 0, 25),
       reminderDays: [1, 3, 7, 14, 30].includes(v.reminderDays) ? v.reminderDays : base.reminderDays,
-      macSpeech: typeof v.macSpeech === 'boolean' ? v.macSpeech : base.macSpeech
+      macSpeech: typeof v.macSpeech === 'boolean' ? v.macSpeech : base.macSpeech,
+      chartRange: ['1W','1M','3M','6M','YTD','1Y','ALL'].includes(v.chartRange) ? v.chartRange : base.chartRange,
+      historyRange: ['1W','1M','3M','6M','YTD','1Y','ALL'].includes(v.historyRange) ? v.historyRange : base.historyRange,
+      pageSize: [10,25,50,100].includes(v.pageSize) ? v.pageSize : base.pageSize
     };
   }
   function defaults(currencies) {
