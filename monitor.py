@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CAD buying GBP/EUR: official daily data, local HTML report, audible alerts."""
+"""CAD buying GBP/EUR/USD: official daily data, local HTML report, audible alerts."""
 import argparse
 import datetime as dt
 import fcntl
@@ -14,7 +14,8 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = 'https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/'
-SERIES = {'GBP': 'FXGBPCAD', 'EUR': 'FXEURCAD'}
+SERIES = {'GBP': 'FXGBPCAD', 'EUR': 'FXEURCAD', 'USD': 'FXUSDCAD'}
+NAMES = {'GBP': 'British pounds', 'EUR': 'euros', 'USD': 'US dollars'}
 LOCAL = ZoneInfo('America/Vancouver')
 
 
@@ -105,7 +106,7 @@ def alert(message, config, test=False):
 
 
 def report(results, now, config, error=None):
-    symbol = {'GBP': '£', 'EUR': '€'}
+    symbol = {'GBP': '£', 'EUR': '€', 'USD': 'US$'}
     rows = []
     comparisons = []
     recent = []
@@ -121,7 +122,7 @@ def report(results, now, config, error=None):
     days = sorted({d for r in results.values() for d, _ in r['recent']}, reverse=True)[:10]
     maps = {c: dict(r['recent']) for c, r in results.items()}
     for day in days:
-        values = ''.join(f'<td>{symbol[c]}{maps[c][day]:.4f}</td>' if day in maps[c] else '<td>—</td>' for c in SERIES)
+        values = ''.join(f'<td>{symbol[c]}{maps[c][day]:.4f}</td>' if day in maps.get(c, {}) else '<td>—</td>' for c in SERIES)
         recent.append(f'<tr><td>{day}</td>{values}</tr>')
     data_date = ', '.join(sorted({r['date'] for r in results.values()})) or 'Unavailable'
     banner = f'<p class="error">Latest check failed: {html.escape(error)}. Any rates below are from the last successful check.</p>' if error else ''
@@ -137,7 +138,7 @@ th,td{{padding:13px 12px;text-align:right;border-bottom:1px solid #e3e9ef;white-
 th:first-child,td:first-child{{text-align:left}}th{{color:#546270;font-size:13px;background:#f7f9fb}}
 .good{{color:#087a4b;font-weight:700}}.error{{background:#fff0e6;padding:14px;border-radius:8px}}a{{color:#125ac2}}
 </style><main><h1>Canadian dollar conversion tracker</h1>
-<p>Buying British pounds and euros with Canadian dollars. <strong>A higher rate means your CAD buys more.</strong></p>
+<p>Buying British pounds, euros, and US dollars with Canadian dollars. <strong>A higher rate means your CAD buys more.</strong></p>
 <p class="muted">Checked {now.strftime('%B %d, %Y at %I:%M %p %Z')} · Rate date {data_date}<br>
 Scheduled weekdays at 2:00 PM Vancouver time, with a catch-up check after waking or signing in. Refresh this page to see saved updates.</p>
 {banner}<h2>Latest rates</h2><div class="scroll"><table><thead><tr><th>Currency</th><th>1 CAD buys</th>
@@ -145,10 +146,10 @@ Scheduled weekdays at 2:00 PM Vancouver time, with a catch-up check after waking
 <p class="muted">Indicative daily averages from the <a href="{SOURCE}">Bank of Canada</a>, before exchange provider fees and spreads. These are not live transaction quotes.</p>
 <h2>How the rate compares</h2><div class="scroll"><table><thead><tr><th>Currency</th><th>30 day average</th><th>Versus average</th>
 <th>90 day best</th></tr></thead><tbody>{''.join(comparisons)}</tbody></table></div>
-<h2>When the alarm sounds</h2><p>Either currency qualifies when the amount bought per CAD is within {config['near_90_day_high_percent']:g}% of its best rate over the past 90 calendar days,
+<h2>When the alarm sounds</h2><p>Any tracked currency qualifies when the amount bought per CAD is within {config['near_90_day_high_percent']:g}% of its best rate over the past 90 calendar days,
 or at least {config['above_30_day_average_percent']:g}% above its preceding 30 day average. These are relative opportunity thresholds, not a forecast.</p>
 <p>The alert plays {config['sound_repeats']} sounds, speaks the result, and requests a Mac desktop notification. Repeat alerts for a currency are suppressed for {config['repeat_after_days']} days unless it improves another {config['improvement_since_alert_percent']:g}%. The same published rate is never alerted twice.</p>
-<h2>Recent history</h2><div class="scroll"><table><thead><tr><th>Rate date</th><th>GBP per CAD</th><th>EUR per CAD</th></tr></thead>
+<h2>Recent history</h2><div class="scroll"><table><thead><tr><th>Rate date</th>{''.join(f'<th>{c} per CAD</th>' for c in SERIES)}</tr></thead>
 <tbody>{''.join(recent)}</tbody></table></div><p class="muted">Mac must be on and signed in. Sound uses your current volume and output device. Edit config.json to change thresholds or audio.</p></main></html>'''
     temporary = ROOT / 'report.html.tmp'
     temporary.write_text(text)
@@ -157,7 +158,7 @@ or at least {config['above_30_day_average_percent']:g}% above its preceding 30 d
 
 def fetch(today):
     start = today - dt.timedelta(days=110)
-    url = ('https://www.bankofcanada.ca/valet/observations/FXGBPCAD,FXEURCAD/json'
+    url = (f'https://www.bankofcanada.ca/valet/observations/{",".join(SERIES.values())}/json'
            f'?start_date={start.isoformat()}&end_date={today.isoformat()}')
     request = urllib.request.Request(url, headers={'User-Agent': 'CADRateMonitor/1.0', 'Accept': 'application/json'})
     last = None
@@ -203,7 +204,8 @@ def main():
             candidates = [r for c, r in results.items() if eligible(r, state.get('alerts', {}).get(c, {}), now, config)]
             state.update({'last_checked': now.isoformat(), 'results': results, 'last_error': None})
             if candidates and not args.no_alert:
-                pieces = [f"One thousand Canadian dollars buys {r['rate'] * 1000:.0f} {'British pounds' if r['currency'] == 'GBP' else 'euros'}, before fees" for r in candidates]
+                amount = config['example_cad_amount']
+                pieces = [f"{amount:,.0f} Canadian dollars buys {r['rate'] * amount:.0f} {NAMES[r['currency']]}, before fees" for r in candidates]
                 alert('Favourable conversion rate. ' + '. '.join(pieces) + '. Open your currency report for details.', config)
                 for r in candidates:
                     state.setdefault('alerts', {})[r['currency']] = {

@@ -1,6 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const symbols = { GBP: '£', EUR: '€' };
+const currencies = ['GBP', 'EUR', 'USD'];
+const symbols = { GBP: '£', EUR: '€', USD: 'US$' };
 const money = (currency, amount, digits = 2) => new Intl.NumberFormat('en-CA', { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount);
 const dayLabel = date => new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(date + 'T12:00:00Z'));
 let data, selected = 'GBP';
@@ -17,7 +18,7 @@ function convert() {
   const valid = input.value.trim() !== '' && Number.isFinite(amount) && amount >= 0 && amount <= 1e9;
   $('amount-error').hidden = valid;
   input.setAttribute('aria-invalid', String(!valid));
-  for (const c of ['GBP', 'EUR']) $('convert-' + c).textContent = valid ? money(c, amount * data.rates[c].rate) : '—';
+  for (const c of currencies) $('convert-' + c).textContent = valid ? money(c, amount * data.rates[c].rate) : '—';
 }
 
 function chart() {
@@ -69,7 +70,7 @@ function render() {
   const stale = Object.values(data.rates).some(r => !isFresh(r));
   $('notice').hidden = !stale;
   $('notice').textContent = 'These rates are more than four days old. Check the official source before converting; favourable-rate signals are paused.';
-  for (const c of ['GBP', 'EUR']) {
+  for (const c of currencies) {
     const r = data.rates[c], fresh = isFresh(r);
     $('rate-' + c).textContent = symbols[c] + r.rate.toFixed(4);
     $('example-' + c).textContent = money(c, 1000 * r.rate);
@@ -82,7 +83,7 @@ function render() {
   const body = $('history-body'); body.replaceChildren();
   for (const day of days) {
     const row = document.createElement('tr');
-    for (const text of [dayLabel(day), ...['GBP', 'EUR'].map(c => recent[c][day] === undefined ? '—' : money(c, recent[c][day], 4))]) {
+    for (const text of [dayLabel(day), ...currencies.map(c => recent[c][day] === undefined ? '—' : money(c, recent[c][day], 4))]) {
       const cell = document.createElement('td'); cell.textContent = text; row.appendChild(cell);
     }
     body.appendChild(row);
@@ -96,14 +97,14 @@ async function load() {
     const response = await fetch('./data.json', { cache: 'no-store' });
     if (!response.ok) throw new Error('Rates unavailable');
     const next = await response.json();
-    if (next.schema_version !== 1 || !next.rates?.GBP?.history?.length || !next.rates?.EUR?.history?.length) throw new Error('Invalid data');
+    if (next.schema_version !== 1 || currencies.some(c => !next.rates?.[c]?.history?.length)) throw new Error('Invalid data');
     data = next; render();
   } catch (error) {
     $('notice').hidden = false;
     $('notice').textContent = data ? 'Could not refresh the page. The last loaded rates remain visible; check their date before converting.' : 'Rates could not be loaded. Please refresh the page or use the official rate source below.';
     if (!data) {
       $('rate-date').textContent = 'Rate data currently unavailable';
-      for (const c of ['GBP', 'EUR']) $('status-' + c).textContent = 'Unavailable';
+      for (const c of currencies) $('status-' + c).textContent = 'Unavailable';
       $('chart-summary').textContent = 'Rate history is unavailable.';
       $('history-body').firstElementChild.firstElementChild.textContent = 'Rate history is unavailable.';
     }

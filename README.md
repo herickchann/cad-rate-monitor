@@ -2,7 +2,7 @@
 
 [Open the live tracker](https://herickchann.github.io/cad-rate-monitor/)
 
-Track how many British pounds and euros you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, 90-day charts, an amount converter, and optional audible alerts on macOS.
+Track how many British pounds, euros, and US dollars you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, 90-day charts, an amount converter, and optional audible alerts on macOS.
 
 Higher foreign currency received per CAD is better. Published rates are indicative and exclude your provider's fees and spread.
 
