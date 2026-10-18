@@ -34,3 +34,11 @@
 @media(max-width:650px){header{flex-wrap:wrap;gap:15px}.header-actions{margin-left:auto}.settings-trigger{padding:9px;gap:5px}.alerts-state{padding:2px 5px}}
 
 .alert-setup .button,.converter button.button{border:0;justify-content:center}.secondary-button:disabled{opacity:.45;cursor:default}.alerts-trigger[data-active="true"] .alerts-state{background:var(--button);color:var(--button-text)}
+
+/* Keep table controls consistent with the selected dashboard theme. */
+.history-filter,.page-size-control{position:relative}
+.history-filter::after,.page-size-control::after{content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.history-filter select,.page-size-control select{appearance:none;-webkit-appearance:none;background:var(--toggle-bg);color:var(--ink);border:1px solid var(--line);border-radius:9px;min-height:38px;padding:8px 36px 8px 13px;font-size:12px;font-weight:600;line-height:1.4;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.history-filter select:hover,.page-size-control select:hover{border-color:var(--accent)}
+.history-filter select:focus-visible,.page-size-control select:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-color:var(--accent)}
+.history-filter select option,.page-size-control select option{background:var(--field);color:var(--ink);font-weight:400}
