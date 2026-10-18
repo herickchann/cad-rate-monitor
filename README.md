@@ -4,15 +4,25 @@
 
 **Your Canadian-dollar radar.** CADar uses a simple C-shaped radar icon. The original bird mascot appears quietly at the bottom of Settings.
 
-Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, historical charts with selectable time ranges, an amount converter, and built-in browser sound alerts.
+Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily reference rates and VBCE travel-cash estimates. Includes a public dashboard, historical charts with selectable time ranges, an amount converter, and built-in browser sound alerts.
 
 Higher foreign currency received per CAD is better. Published rates are indicative and exclude your provider's fees and spread.
 
 ## Website updates
 
-GitHub Actions builds and publishes the site on pushes to `main`, on manual runs, and weekdays around **2:15 PM America/Vancouver**. Scheduled runs can be delayed. Holidays retain the last available fixing. The webpage polls its published data every 15 minutes by default while open; users can change the interval or choose manual refresh.
+GitHub Actions builds and publishes the site on pushes to `main`, on manual runs, and hourly from **9:15 AM to 5:15 PM America/Vancouver, every day**. Scheduled runs can be delayed. Holidays retain the last available fixing. The webpage polls its published data every 15 minutes by default while open; users can change the interval or choose manual refresh.
 
-The public site uses `config.example.json`. Local changes to `config.json` affect only your Mac alerts. Site generation reads official market data and publishes only dashboard assets and rate data; local alert history, logs, generated reports, and machine-specific configuration are ignored by Git.
+The public site uses `config.example.json`. Local changes to `config.json` affect only your Mac alerts. Site generation reads Bank of Canada history and the public cash feed used by VBCE’s travel-rate page and publishes only dashboard assets and rate data; local alert history, logs, generated reports, and machine-specific configuration are ignored by Git.
+
+## Rate source and VBCE travel cash
+
+The themed **Rate source** menu above the cards switches between **Bank of Canada reference** and **VBCE travel cash**. It remembers the choice in this browser. Cards and converter use the selected source; each card also shows a dated comparison quote. Charts and the paginated history always use Bank of Canada reference data, with explicit source labels. These observations can have different dates and represent different products; they are not a same-time provider ranking.
+
+VBCE cash conversions use `1 / sell_price`: CAD spent to buy foreign notes at VBCE’s selling price. The feed quotes CAD per single foreign unit, including yen. We preserve each provider quote timestamp, separately from the site publication timestamp. Estimates are for smaller cash transactions; confirm the actual rate and currency availability with VBCE. Larger amounts may receive different pricing. VBCE online/electronic transfers are a separate product.
+
+At publication `vbce.py` reads the public page bundle to discover the public rate-feed URL used by VBCE itself. No account credentials or private API key are required or published. Each scheduled build fetches once for all visitors, validates all four positive buy/sell prices and timezone-aware timestamps, and includes only the required public quote fields. If the feed is unavailable or changes format, the site publishes BoC history normally and marks cash estimates unavailable, without silently substituting BoC rates. No cash history is fabricated. Quotes more than four days old cannot trigger cash alerts.
+
+Alerts follow the selected source. For VBCE, set an optional target for each currency in **Alerts → VBCE cash targets** (foreign units received per C$1). Blank or zero pauses cash alerts for that currency. The currency’s notification switch must also be enabled. A fresh cash rate at or above the target qualifies, and its badge reads **Target met**. BoC continues to use its history-based rules in Settings. Source-labelled notifications and separate source histories prevent a BoC fixing from suppressing a cash alert. The same quote never repeats; subsequent quotes follow the reminder interval or a 1% improvement rule. Targets remain local to the browser.
 
 ## Currency switches
 

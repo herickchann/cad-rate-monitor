@@ -39,7 +39,7 @@
     widget.select.dispatchEvent(new Event('change', {bubbles:true}));
     sync(widget); close(); widget.button.focus({preventScroll:true});
   }
-  for (const select of document.querySelectorAll('.history-filter select, .page-size-control select, .settings-grid select')) {
+  for (const select of document.querySelectorAll('.source-control select, .history-filter select, .page-size-control select, .settings-grid select')) {
     const wrapper = document.createElement('div'); wrapper.className = 'site-select';
     select.before(wrapper); wrapper.appendChild(select);
     const label = document.querySelector(`label[for="${select.id}"]`);

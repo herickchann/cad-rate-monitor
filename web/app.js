@@ -49,6 +49,23 @@ function isFresh(rate) {
   return (Date.parse(today + 'T12:00:00Z') - Date.parse(rate.date + 'T12:00:00Z')) / 86400000 <= 4;
 }
 
+function cashRate(currency) {
+  const r = data?.vbce?.status === 'available' ? data.vbce.rates?.[currency] : null;
+  return r && Number.isFinite(r.rate) && r.rate > 0 && Number.isFinite(Date.parse(r.updated_at)) ? r : null;
+}
+function currentRate(currency) {
+  return settings.source === 'vbce' ? cashRate(currency) : data?.rates[currency];
+}
+function cashFresh(rate) {
+  const age = rate ? Date.now() - Date.parse(rate.updated_at) : Infinity;
+  return age >= -300000 && age <= 4 * 86400000;
+}
+function cashGood(currency, rate) {
+  const target = settings.vbceTargets[currency];
+  return cashFresh(rate) && target > 0 && rate.rate >= target;
+}
+const quoteTime = value => new Intl.DateTimeFormat('en-CA', {dateStyle:'medium', timeStyle:'short', timeZone:'America/Vancouver'}).format(new Date(value));
+
 function convert() {
   if (!data) return;
   const input = $('amount');
@@ -56,7 +73,10 @@ function convert() {
   const valid = input.value.trim() !== '' && Number.isFinite(amount) && amount >= 0 && amount <= 1e9;
   $('amount-error').hidden = valid;
   input.setAttribute('aria-invalid', String(!valid));
-  for (const c of currencies) $('convert-' + c).textContent = valid ? money(c, amount * data.rates[c].rate) : '—';
+  for (const c of currencies) {
+    const rate = currentRate(c);
+    $('convert-' + c).textContent = valid && rate ? money(c, amount * rate.rate) : '—';
+  }
 }
 
 function rangeStart(range, lastDate) {
@@ -181,22 +201,51 @@ function renderHistory() {
 }
 
 function render() {
+  const cash = settings.source === 'vbce';
   const dates = [...new Set(Object.values(data.rates).map(r => r.date))];
-  $('rate-date').textContent = 'Rate date · ' + dates.map(dayLabel).join(' / ');
-  const stale = enabled.some(c => !isFresh(data.rates[c]));
-  $('notice').hidden = !stale;
-  $('notice').textContent = 'These rates are more than four days old. Check the official source before converting; favourable-rate signals are paused.';
+  const quotes = enabled.map(cashRate).filter(Boolean);
+  $('source-title').textContent = cash ? 'VBCE travel-cash estimates' : 'Bank of Canada daily rates';
+  $('rate-date').textContent = cash
+    ? (quotes.length ? 'Quoted · ' + [...new Set(quotes.map(r => quoteTime(r.updated_at)))].join(' / ') + ' Vancouver' : 'Cash quotes currently unavailable')
+    : 'Rate date · ' + dates.map(dayLabel).join(' / ');
+  $('source-description').textContent = cash
+    ? 'CAD → foreign cash · VBCE sells · Cards and converter use this source.'
+    : 'Daily market reference · Cards and converter use this source.';
+  $('rate-note').textContent = cash
+    ? 'VBCE cash estimates for smaller transactions. Confirm the rate and currency availability with VBCE. Charts and history below use Bank of Canada daily references.'
+    : 'Daily averages, before fees and provider spreads. These are reference rates, not live transaction quotes.';
+  $('converter-note').textContent = cash
+    ? 'Estimated at VBCE’s selling price. Confirm your quote with VBCE; larger amounts may receive different pricing.'
+    : 'Your provider’s fees and exchange spread will reduce the amount received.';
+  const unavailable = cash && enabled.some(c => !cashRate(c));
+  const stale = enabled.some(c => cash ? !cashFresh(cashRate(c)) : !isFresh(data.rates[c]));
+  $('notice').hidden = !unavailable && !stale;
+  $('notice').textContent = unavailable
+    ? 'VBCE quotes could not be retrieved at the last publication. Cash conversions and cash alerts are unavailable; Bank of Canada history remains available.'
+    : 'These quotes are more than four days old. Check the source before exchanging; alerts for stale data are paused.';
   for (const c of currencies) {
-    const r = data.rates[c], fresh = isFresh(r), good = RateAlerts.favourable(r, settings);
-    $('rate-' + c).textContent = symbols[c] + r.rate.toFixed(settings.precision);
-    $('example-' + c).textContent = money(c, settings.amount * r.rate);
-    document.querySelector('#card-' + c + ' .card-foot span').textContent = 'CAD ' + money('CAD', settings.amount, Number.isInteger(settings.amount) ? 0 : 2) + ' buys';
-    $('change-' + c).textContent = `${r.daily_change_percent >= 0 ? '↑ +' : '↓ '}${r.daily_change_percent.toFixed(2)}% from previous rate day`;
-    $('status-' + c).textContent = !fresh ? 'Data stale' : good ? 'Favourable' : 'Watching';
+    const r = currentRate(c), fresh = cash ? cashFresh(r) : isFresh(r);
+    const good = cash ? cashGood(c, r) : RateAlerts.favourable(r, settings);
+    $('rate-' + c).textContent = r ? symbols[c] + r.rate.toFixed(settings.precision) : '—';
+    $('example-' + c).textContent = r ? money(c, settings.amount * r.rate) : '—';
+    document.querySelector('#card-' + c + ' .card-foot span').textContent = money('CAD', settings.amount, Number.isInteger(settings.amount) ? 0 : 2) + ' buys';
+    $('change-' + c).textContent = cash
+      ? (r ? `VBCE sells · C$${r.sell_cad.toFixed(c === 'JPY' ? 6 : 4)} per ${c}` : 'Cash quote unavailable')
+      : `${r.daily_change_percent >= 0 ? '↑ +' : '↓ '}${r.daily_change_percent.toFixed(2)}% from previous rate day`;
+    $('status-' + c).textContent = !r ? 'Unavailable' : !fresh ? 'Data stale' : good ? (cash ? 'Target met' : 'Favourable') : cash && !settings.vbceTargets[c] ? 'No target' : 'Watching';
     $('status-' + c).className = 'badge' + (fresh && good ? ' good' : '');
+    let comparison = $('comparison-' + c);
+    if (!comparison) {
+      comparison = document.createElement('p'); comparison.id = 'comparison-' + c; comparison.className = 'card-comparison';
+      $('change-' + c).after(comparison);
+    }
+    const other = cash ? data.rates[c] : cashRate(c);
+    comparison.textContent = other
+      ? `${cash ? 'BoC reference' : 'VBCE cash'}: ${money(c, other.rate, settings.precision)} / CAD · ${dayLabel(other.date)}`
+      : 'VBCE cash comparison unavailable';
   }
   renderHistory();
-  $('built-at').textContent = 'Last published · ' + new Intl.DateTimeFormat('en-CA', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Vancouver' }).format(new Date(data.updated_at)) + ' Vancouver time';
+  $('built-at').textContent = 'Last published · ' + quoteTime(data.updated_at) + ' Vancouver time';
   convert(); chart();
 }
 
@@ -246,14 +295,15 @@ function alertStatus() {
     if (settings.sound && !soundReady) {
       label = 'Resume'; message = 'Sound needs to be resumed. Click Turn on sound alerts below.';
     } else if (soundReady || (settings.notifications && notificationPermission() === 'granted')) {
-      label = 'On'; message = `Watching ${settings.notifyCurrencies.join(', ')}. ${soundReady ? 'Sound is ready.' : 'Desktop notifications are enabled.'} Keep this page open.`;
+      label = 'On'; message = `Watching ${settings.source === 'vbce' ? 'VBCE cash targets' : 'Bank of Canada'} · ${settings.notifyCurrencies.join(', ')}. ${soundReady ? 'Sound is ready.' : 'Desktop notifications are enabled.'} Keep this page open.`;
     } else {
       label = 'Blocked'; message = 'Notification permission is blocked. Turn on sound alerts or allow notifications in your browser.';
     }
     if (!navigator.onLine) { label = 'Offline'; message = 'You are offline. Alerts will resume when your connection returns; keep this page open.'; }
     else if (!data) { label = 'Waiting'; message = 'Waiting for rate data. Keep this page open; alerts start when fresh rates are available.'; }
-    else if (data && settings.notifyCurrencies.every(c => !isFresh(data.rates[c]))) { label = 'Waiting'; message = 'Waiting for fresh published rates. Old rates cannot trigger an alert.'; }
+    else if (data && settings.notifyCurrencies.every(c => settings.source === 'vbce' ? !cashFresh(cashRate(c)) : !isFresh(data.rates[c]))) { label = 'Waiting'; message = 'Waiting for fresh published rates. Old rates cannot trigger an alert.'; }
   }
+  if (active && data && settings.source === 'vbce' && settings.notifyCurrencies.length && !settings.notifyCurrencies.some(c => settings.vbceTargets[c] > 0)) { label = 'Choose'; message = 'Set at least one VBCE cash target below. Alerts follow the source selected at the top of the page.'; }
   $('alerts-state').textContent = label;
   $('open-alerts').dataset.active = String(label === 'On');
   $('alert-status').textContent = message;
@@ -309,9 +359,10 @@ async function enableSoundAlerts() {
   else $('alert-status').textContent = 'Sound could not start. Check this site’s audio permission and your device volume, then try again.';
 }
 
+function alertHistoryKey() { return settings.source === 'vbce' ? 'cad-rate-monitor.alerts.vbce.v1' : 'cad-rate-monitor.alerts.v1'; }
 function readAlertHistory() {
   try {
-    const raw = JSON.parse(preferenceStorage.getItem('cad-rate-monitor.alerts.v1'));
+    const raw = JSON.parse(preferenceStorage.getItem(alertHistoryKey()));
     const result = {};
     for (const c of currencies) {
       const value = raw?.[c];
@@ -322,8 +373,8 @@ function readAlertHistory() {
 }
 let sessionAlertHistory = {};
 function persistAlertHistory(history) {
-  sessionAlertHistory = history;
-  try { preferenceStorage.setItem('cad-rate-monitor.alerts.v1', JSON.stringify(history)); }
+  sessionAlertHistory[settings.source] = history;
+  try { preferenceStorage.setItem(alertHistoryKey(), JSON.stringify(history)); }
   catch { preferenceNote(false); }
 }
 
@@ -340,15 +391,24 @@ async function checkAlerts() {
   if (!data || checkingAlerts || (!settings.notifications && !settings.sound)) return;
   checkingAlerts = true;
   const check = async () => {
-    const history = { ...sessionAlertHistory, ...readAlertHistory() };
+    const source = settings.source;
+    const history = { ...sessionAlertHistory[source], ...readAlertHistory() };
     const now = Date.now();
     const today = new Intl.DateTimeFormat('en-CA', {timeZone:'America/Vancouver',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
     for (const c of currencies) {
-      const r = data.rates[c];
-      if (!RateAlerts.eligible(c, r, history[c], settings, today, now)) continue;
-      const body = `${c} is favourable: CAD ${money('CAD', settings.amount)} buys about ${money(c, settings.amount * r.rate)}, before fees.`;
-      if (await deliverAlert(body, 'cad-rate-monitor-' + c)) {
-        history[c] = { date: r.date, rate: r.rate, time: now };
+      if (source !== settings.source) break;
+      const r = currentRate(c), cash = source === 'vbce', previous = history[c];
+      if (cash) {
+        if (!settings.notifyCurrencies.includes(c) || !cashGood(c, r)) continue;
+        if (previous?.quote === r.updated_at && previous?.rate === r.rate) continue;
+        if (previous?.target === settings.vbceTargets[c] && now - previous.time < settings.reminderDays * 86400000 && r.rate < previous.rate * 1.01) continue;
+      } else if (!RateAlerts.eligible(c, r, previous, settings, today, now)) continue;
+      const body = cash
+        ? `VBCE cash target met · ${c}: C$${settings.amount.toLocaleString('en-CA')} buys about ${money(c, settings.amount * r.rate)}. Quote ${quoteTime(r.updated_at)} Vancouver; confirm with VBCE.`
+        : `Bank of Canada · ${c} is favourable: ${money('CAD', settings.amount)} buys about ${money(c, settings.amount * r.rate)}, before fees.`;
+      if (await deliverAlert(body, 'cadar-' + source + '-' + c)) {
+        if (source !== settings.source) break;
+        history[c] = { date: r.date, rate: r.rate, time: now, ...(cash ? {quote:r.updated_at, target:settings.vbceTargets[c]} : {}) };
         persistAlertHistory(history);
         $('alert-banner').hidden = false; $('alert-banner').textContent = body;
       }
@@ -361,6 +421,9 @@ async function checkAlerts() {
 }
 
 function initializeSettings() {
+  $('rate-source').value = settings.source;
+  for (const c of currencies) $('target-' + c).value = settings.vbceTargets[c] || '';
+  $('alert-source-note').textContent = 'Currently watching: ' + (settings.source === 'vbce' ? 'VBCE travel cash targets.' : 'Bank of Canada history rules.') + ' Change the source at the top of the page.';
   for (const [id, value] of Object.entries({theme:settings.theme,amount:settings.amount,precision:settings.precision,refresh:settings.refreshMinutes,volume:settings.volume * 100,'near-high':settings.nearHigh,'above-average':settings.aboveAverage,reminder:settings.reminderDays})) $('setting-' + id).value = value;
   for (const [id, value] of Object.entries({history:settings.showHistory,notifications:settings.notifications,sound:settings.sound})) $('setting-' + id).checked = value;
   for (const c of currencies) document.querySelector(`[data-notify="${c}"]`).checked = settings.notifyCurrencies.includes(c);
@@ -378,6 +441,20 @@ function changedSettings() {
   savePreferences(); initializeSettings(); if (data) { render(); checkAlerts(); }
 }
 
+$('rate-source').addEventListener('change', event => {
+  settings.source = event.target.value; $('alert-banner').hidden = true; changedSettings();
+});
+for (const input of document.querySelectorAll('[data-vbce-target]')) {
+  input.addEventListener('input', () => {
+    if (!input.checkValidity()) return;
+    settings.vbceTargets[input.dataset.vbceTarget] = input.value.trim() ? input.valueAsNumber : 0;
+    savePreferences(); if (data) { render(); checkAlerts(); } alertStatus();
+  });
+  input.addEventListener('change', () => {
+    if (!input.checkValidity()) { input.reportValidity(); return; }
+    changedSettings();
+  });
+}
 $('amount').addEventListener('input', () => {
   convert();
   const amount = $('amount').valueAsNumber;

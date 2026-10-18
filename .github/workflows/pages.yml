@@ -5,7 +5,7 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '15 14 * * 1-5'
+    - cron: '15 9-17 * * *'
       timezone: America/Vancouver
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Build with fresh Bank of Canada data
+      - name: Build Bank of Canada history and VBCE cash snapshot
         run: python build_site.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4

@@ -6,7 +6,7 @@
     widget.less.disabled = Number.isFinite(value) && value <= Number(widget.input.min);
     widget.more.disabled = Number.isFinite(value) && value >= Number(widget.input.max);
   }
-  for (const input of document.querySelectorAll('.settings-grid input[type="number"]')) {
+  for (const input of document.querySelectorAll('.settings-grid input[type="number"], .vbce-targets input[type="number"]')) {
     const wrapper = document.createElement('div'); wrapper.className = 'number-stepper';
     input.before(wrapper);
     const label = document.querySelector(`label[for="${input.id}"]`).textContent;
@@ -20,7 +20,7 @@
     const widget = {input, less, more}; widgets.push(widget);
     function change(direction) {
       const value = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : Number(input.min) || 0;
-      const increment = input.step === 'any' ? 100 : Number(input.step) || 1;
+      const increment = input.dataset.vbceTarget ? (input.dataset.vbceTarget === 'JPY' ? .1 : .001) : input.step === 'any' ? 100 : Number(input.step) || 1;
       const minimum = input.min === '' ? -Infinity : Number(input.min);
       const maximum = input.max === '' ? Infinity : Number(input.max);
       input.value = String(Math.min(maximum, Math.max(minimum, Number((value + direction * increment).toFixed(8)))));

@@ -97,3 +97,20 @@
 .settings-brand strong{font-size:12px;font-weight:650;color:var(--ink)}
 .settings-brand p{font-size:11px;margin:2px 0 0}
 @media(max-width:540px){.wordmark{font-size:23px}.brand-mark{width:36px;height:36px;border-radius:9px}}
+
+/* Source controls share the site's custom menus and theme tokens. */
+.source-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0 24px;flex-wrap:wrap}
+.source-control{display:flex;align-items:center;gap:12px}
+.source-control label{font-size:12px;color:var(--muted);font-weight:600}
+.source-control .site-select{min-width:240px}
+.source-bar p{margin:0;max-width:540px}
+.vbce-targets>label{display:block;font-size:13px;margin:16px 0 6px}
+.vbce-targets .number-stepper{width:100%}
+.vbce-targets input{width:100%;min-width:0;background:var(--field);color:var(--ink);border:0;padding:10px;font:inherit}
+.vbce-targets .number-stepper{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.card-comparison{font-size:11px;color:var(--muted);margin:8px 0 12px}
+@media(max-width:540px){.source-control{width:100%;justify-content:space-between}.source-control .site-select{min-width:0;flex:1;max-width:275px}.source-bar{padding-top:0}.source-bar p{font-size:12px}}
+
+.vbce-targets .number-stepper input{appearance:textfield;-moz-appearance:textfield;flex:1;width:0;min-width:0;text-align:center;outline:0}
+.card-comparison{padding-right:32px}
+.source-control .site-select-trigger{height:44px;min-height:44px}

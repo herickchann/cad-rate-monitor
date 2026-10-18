@@ -4,6 +4,7 @@ import datetime as dt
 import json
 from pathlib import Path
 import shutil
+from vbce import fetch_cash_rates
 from monitor import analyse, fetch, LOCAL, SERIES
 
 ROOT = Path(__file__).resolve().parent
@@ -33,6 +34,7 @@ def build(output=None):
         'thresholds': {'near_high_percent': config['near_90_day_high_percent'],
                        'above_average_percent': config['above_30_day_average_percent']},
         'rates': rates,
+        'vbce': fetch_cash_rates(now),
     }
     for path in (ROOT / 'web').iterdir():
         if path.is_file():

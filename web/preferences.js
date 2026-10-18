@@ -3,7 +3,7 @@ const CurrencyPreferences = (() => {
   const key = 'cad-rate-monitor.preferences.v1';
   const number = (value, fallback, min, max) => typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max ? value : fallback;
   function defaultSettings(currencies) {
-    return { theme: 'forest', amount: 1000, refreshMinutes: 15, showHistory: true, precision: 4,
+    return { source: 'boc', vbceTargets: {}, theme: 'forest', amount: 1000, refreshMinutes: 15, showHistory: true, precision: 4,
       notifications: false, sound: false, volume: .5, notifyCurrencies: [...currencies],
       nearHigh: .5, aboveAverage: 2, reminderDays: 7, macSpeech: true,
       cardOrder: [...currencies], chartRange: '3M', historyRange: '3M', pageSize: 10 };
@@ -11,6 +11,8 @@ const CurrencyPreferences = (() => {
   function settings(value, currencies) {
     const base = defaultSettings(currencies), v = value && typeof value === 'object' ? value : {};
     return {
+      source: ['boc', 'vbce'].includes(v.source) ? v.source : base.source,
+      vbceTargets: Object.fromEntries(currencies.map(c => [c, number(v.vbceTargets?.[c], 0, 0, 1e6)])),
       cardOrder: [...new Set([...(Array.isArray(v.cardOrder) ? v.cardOrder.filter(c => currencies.includes(c)) : []), ...currencies])],
       theme: ['forest', 'dark', 'ocean', 'system'].includes(v.theme) ? v.theme : base.theme,
       amount: number(v.amount, base.amount, 0, 1e9),
