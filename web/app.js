@@ -13,12 +13,14 @@ const restored = CurrencyPreferences.read(preferenceStorage, currencies);
 let data, enabled = restored.enabled, selected = restored.selected, settings = restored.settings;
 let refreshTimer, audioContext, checkingAlerts = false, loading = false;
 let historyPage = 1;
+let soundQueueUntil = 0, resumingSound = false;
+const soundNodes = new Set();
 const rangeTitles = {'1W':'The past week','1M':'The past month','3M':'The past 3 months','6M':'The past 6 months',YTD:'Year to date','1Y':'The past year',ALL:'All available history'};
 
 function preferenceNote(canSave) {
   $('preference-note').textContent = canSave
-    ? 'Remembered on this browser. Mac sound-alert settings are separate.'
-    : 'Browser storage is unavailable; choices apply to this visit only. Mac sound-alert settings are separate.';
+    ? 'Remembered on this browser.'
+    : 'Browser storage is unavailable; choices apply to this visit only.';
 }
 
 function savePreferences() {
@@ -215,7 +217,7 @@ async function load() {
       $('chart-summary').textContent = 'Rate history is unavailable.';
       $('history-body').replaceChildren();
     }
-  } finally { loading = false; }
+  } finally { loading = false; alertStatus(); }
 }
 
 function applyTheme() {
@@ -225,7 +227,8 @@ function applyTheme() {
 
 function scheduleRefresh() {
   clearInterval(refreshTimer);
-  if (settings.refreshMinutes) refreshTimer = setInterval(load, settings.refreshMinutes * 60 * 1000);
+  const minutes = settings.refreshMinutes || (settings.sound || settings.notifications ? 15 : 0);
+  if (minutes) refreshTimer = setInterval(load, minutes * 60 * 1000);
 }
 
 function notificationPermission() {
@@ -233,44 +236,76 @@ function notificationPermission() {
 }
 
 function alertStatus() {
-  const parts = [];
-  if (!settings.notifyCurrencies.length) parts.push('No currencies selected for alerts.');
-  if (settings.notifications) parts.push(notificationPermission() === 'granted' ? 'Desktop notifications enabled.' : 'Desktop notification permission is missing or blocked.');
-  if (settings.sound) parts.push(audioContext?.state === 'running' ? 'Sound is enabled for this visit.' : 'Enable sound for this visit to hear saved sound alerts.');
-  if (!settings.notifications && !settings.sound) parts.push('Browser alerts are off. Choose a delivery option above.');
-  $('alert-status').textContent = parts.join(' ');
+  const active = settings.sound || settings.notifications;
+  const soundReady = settings.sound && audioContext?.state === 'running';
+  let label = 'Off', message = 'Alerts are off. Turn on sound alerts to get started.';
+  if (active && !settings.notifyCurrencies.length) {
+    label = 'Choose'; message = 'Choose at least one currency below to receive alerts.';
+  } else if (active) {
+    if (settings.sound && !soundReady) {
+      label = 'Resume'; message = 'Sound needs to be resumed. Click Turn on sound alerts below.';
+    } else if (soundReady || (settings.notifications && notificationPermission() === 'granted')) {
+      label = 'On'; message = `Watching ${settings.notifyCurrencies.join(', ')}. ${soundReady ? 'Sound is ready.' : 'Desktop notifications are enabled.'} Keep this page open.`;
+    } else {
+      label = 'Blocked'; message = 'Notification permission is blocked. Turn on sound alerts or allow notifications in your browser.';
+    }
+    if (!navigator.onLine) { label = 'Offline'; message = 'You are offline. Alerts will resume when your connection returns; keep this page open.'; }
+    else if (!data) { label = 'Waiting'; message = 'Waiting for rate data. Keep this page open; alerts start when fresh rates are available.'; }
+    else if (data && settings.notifyCurrencies.every(c => !isFresh(data.rates[c]))) { label = 'Waiting'; message = 'Waiting for fresh published rates. Old rates cannot trigger an alert.'; }
+  }
+  $('alerts-state').textContent = label;
+  $('open-alerts').dataset.active = String(label === 'On');
+  $('alert-status').textContent = message;
+  $('enable-audio').textContent = soundReady ? 'Sound alerts are on' : 'Turn on sound alerts';
+  $('enable-audio').disabled = soundReady;
+  $('pause-alerts').disabled = !active;
+  $('volume-value').textContent = Math.round(settings.volume * 100) + '%';
 }
 
 async function armSound() {
   try {
     const Audio = window.AudioContext || window.webkitAudioContext;
     if (!Audio) throw new Error('Audio unavailable');
-    audioContext ||= new Audio();
+    if (!audioContext || audioContext.state === 'closed') {
+      audioContext = new Audio();
+      audioContext.addEventListener('statechange', alertStatus);
+    }
     await audioContext.resume();
-    settings.sound = true;
-    $('setting-sound').checked = true;
-    savePreferences(); alertStatus();
     return audioContext.state === 'running';
-  } catch {
-    $('alert-status').textContent = 'This browser could not enable sound. Check its audio permissions and your output device.';
-    return false;
-  }
+  } catch { return false; }
+}
+
+function stopSound() {
+  for (const node of soundNodes) { try { node.stop(); } catch {} }
+  soundNodes.clear(); soundQueueUntil = 0;
+  if (audioContext) audioContext.suspend();
 }
 
 function playSound() {
   if (audioContext?.state !== 'running') return false;
-  for (let i = 0; i < 2; i++) {
+  const beginning = Math.max(audioContext.currentTime, soundQueueUntil);
+  for (let i = 0; i < 5; i++) {
     const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
-    const start = audioContext.currentTime + i * .35;
-    oscillator.frequency.value = i ? 880 : 660;
+    const start = beginning + i * .6;
+    oscillator.frequency.value = i % 2 ? 880 : 660;
     gain.gain.setValueAtTime(.001, start);
-    gain.gain.exponentialRampToValueAtTime(.18 * settings.volume, start + .02);
-    gain.gain.exponentialRampToValueAtTime(.001, start + .22);
+    gain.gain.exponentialRampToValueAtTime(.3 * settings.volume, start + .025);
+    gain.gain.exponentialRampToValueAtTime(.001, start + .35);
     oscillator.connect(gain); gain.connect(audioContext.destination);
-    oscillator.start(start); oscillator.stop(start + .24);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+    soundNodes.add(oscillator);
+    oscillator.start(start); oscillator.stop(start + .4);
+    oscillator.onended = () => { soundNodes.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
   }
+  soundQueueUntil = beginning + 3;
   return true;
+}
+
+async function enableSoundAlerts() {
+  const ready = await armSound();
+  settings.sound = ready;
+  changedSettings();
+  if (ready) { playSound(); checkAlerts(); }
+  else $('alert-status').textContent = 'Sound could not start. Check this site’s audio permission and your device volume, then try again.';
 }
 
 function readAlertHistory() {
@@ -326,7 +361,7 @@ async function checkAlerts() {
 
 function initializeSettings() {
   for (const [id, value] of Object.entries({theme:settings.theme,amount:settings.amount,precision:settings.precision,refresh:settings.refreshMinutes,volume:settings.volume * 100,'near-high':settings.nearHigh,'above-average':settings.aboveAverage,reminder:settings.reminderDays})) $('setting-' + id).value = value;
-  for (const [id, value] of Object.entries({history:settings.showHistory,notifications:settings.notifications,sound:settings.sound,'mac-speech':settings.macSpeech})) $('setting-' + id).checked = value;
+  for (const [id, value] of Object.entries({history:settings.showHistory,notifications:settings.notifications,sound:settings.sound})) $('setting-' + id).checked = value;
   for (const c of currencies) document.querySelector(`[data-notify="${c}"]`).checked = settings.notifyCurrencies.includes(c);
   $('amount').value = settings.amount;
   $('history-range').value = settings.historyRange;
@@ -375,12 +410,11 @@ for (const [id, key] of Object.entries({amount:'amount','near-high':'nearHigh','
   $('rule-above-average').textContent = settings.aboveAverage;
   savePreferences(); if (data) { render(); checkAlerts(); }
 });
-for (const [id, key] of Object.entries({history:'showHistory','mac-speech':'macSpeech'})) $('setting-' + id).addEventListener('change', event => { settings[key] = event.target.checked; changedSettings(); });
-$('setting-volume').addEventListener('input', event => { settings.volume = Number(event.target.value) / 100; savePreferences(); });
+for (const [id, key] of Object.entries({history:'showHistory'})) $('setting-' + id).addEventListener('change', event => { settings[key] = event.target.checked; changedSettings(); });
+$('setting-volume').addEventListener('input', event => { settings.volume = Number(event.target.value) / 100; savePreferences(); alertStatus(); });
 $('setting-sound').addEventListener('change', async event => {
-  settings.sound = event.target.checked;
-  if (settings.sound) await armSound();
-  changedSettings();
+  if (event.target.checked) await enableSoundAlerts();
+  else { settings.sound = false; stopSound(); changedSettings(); }
 });
 $('setting-notifications').addEventListener('change', async event => {
   const requested = event.target.checked;
@@ -394,27 +428,28 @@ $('setting-notifications').addEventListener('change', async event => {
   changedSettings();
   if (requested && !settings.notifications) $('alert-status').textContent = 'Desktop notifications are unavailable or blocked. You can enable sound instead, or change this site’s browser notification permission.';
 });
-$('enable-audio').addEventListener('click', async () => { if (await armSound()) checkAlerts(); });
+$('enable-audio').addEventListener('click', enableSoundAlerts);
 $('test-alert').addEventListener('click', async () => {
-  if (settings.sound) await armSound();
-  const delivered = await deliverAlert('This is a test of your CAD rate alert.', 'cad-rate-monitor-test');
-  $('alert-status').textContent = delivered ? 'Test alert requested. Check your sound output and notification centre.' : 'Turn on desktop notifications or enable sound for this visit, then test again.';
+  if (await armSound()) {
+    playSound();
+    $('alert-status').textContent = 'Sample playing: five chimes. If you cannot hear them, check your device volume and whether this tab is muted.';
+  } else $('alert-status').textContent = 'Sound could not start. Check your browser audio permission and device volume, then try again.';
+});
+$('pause-alerts').addEventListener('click', () => {
+  settings.sound = false; settings.notifications = false; stopSound();
+  changedSettings();
 });
 $('refresh-now').addEventListener('click', load);
-$('download-mac-settings').addEventListener('click', () => {
-  const file = new Blob([JSON.stringify(RateAlerts.macSettings(settings), null, 2) + '\n'], { type: 'application/json' });
-  const url = URL.createObjectURL(file), link = document.createElement('a');
-  link.href = url; link.download = 'cad-rate-monitor-settings.json'; ($('settings-dialog').open ? $('settings-dialog') : document.body).appendChild(link); link.click(); link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
 $('reset-settings').addEventListener('click', () => {
   enabled = [...currencies]; selected = currencies[0]; settings = CurrencyPreferences.defaultSettings(currencies); historyPage = 1;
-  $('alert-banner').hidden = true; changedSettings();
+  $('alert-banner').hidden = true; stopSound(); changedSettings();
 });
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (settings.theme === 'system') applyTheme(); });
 preferenceNote(restored.canSave);
 initializeSettings();
-document.addEventListener('visibilitychange', () => { if (!document.hidden && settings.refreshMinutes) load(); });
+document.addEventListener('visibilitychange', () => { alertStatus(); if (!document.hidden && (settings.refreshMinutes || settings.sound || settings.notifications)) load(); });
+window.addEventListener('online', () => { alertStatus(); load(); });
+window.addEventListener('offline', alertStatus);
 load();
 
 const settingsDialog = $('settings-dialog');
@@ -448,3 +483,32 @@ $('history-page-size').addEventListener('change', event => {
 });
 $('history-previous').addEventListener('click', () => { historyPage--; renderHistory(); });
 $('history-next').addEventListener('click', () => { historyPage++; renderHistory(); });
+
+for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, async event => {
+  if (!event.isTrusted || !settings.sound || audioContext?.state === 'running' || resumingSound) return;
+  // Alert controls handle their own activation and sample, avoiding duplicate alarms.
+  if (event.target.closest?.('#enable-audio, #test-alert, #pause-alerts, #setting-sound, #reset-settings')) return;
+  resumingSound = true;
+  try { if (await armSound()) { alertStatus(); checkAlerts(); } }
+  finally { resumingSound = false; }
+});
+const alertsDialog = $('alerts-dialog');
+function openAlerts() {
+  if (!alertsDialog.open) alertsDialog.showModal();
+  document.body.classList.add('settings-open');
+  $('open-alerts').setAttribute('aria-expanded', 'true');
+  alertStatus();
+}
+$('open-alerts').addEventListener('click', openAlerts);
+$('converter-open-alerts').addEventListener('click', openAlerts);
+$('close-alerts').addEventListener('click', () => alertsDialog.close());
+alertsDialog.addEventListener('close', () => {
+  document.body.classList.remove('settings-open');
+  $('open-alerts').setAttribute('aria-expanded', 'false');
+  $('open-alerts').focus();
+});
+alertsDialog.addEventListener('click', event => {
+  if (event.target !== alertsDialog) return;
+  const bounds = alertsDialog.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) alertsDialog.close();
+});

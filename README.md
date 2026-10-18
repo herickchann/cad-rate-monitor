@@ -2,7 +2,7 @@
 
 [Open the live tracker](https://herickchann.github.io/cad-rate-monitor/)
 
-Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, historical charts with selectable time ranges, an amount converter, and optional audible alerts on macOS.
+Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, historical charts with selectable time ranges, an amount converter, and built-in browser sound alerts.
 
 Higher foreign currency received per CAD is better. Published rates are indicative and exclude your provider's fees and spread.
 
@@ -26,19 +26,17 @@ Ranges end on the latest published rate date, so weekends and holidays do not cr
 
 Open the **Settings** panel from the top-right corner for Forest light, Midnight dark, Ocean blue, or Match device themes; a saved default CAD amount; rate precision; refresh frequency; history visibility; and custom favourable-rate thresholds. Existing saved currency selections survive this update. Reset browser settings restores defaults without clearing alert history.
 
-Each currency has an independent notification switch. Turning off a display switch only hides its dashboard content; it does not mute its notifications. Browser desktop notifications are off by default and request permission only when explicitly enabled. Sound is off by default, has its own volume control, and must be enabled by a click after reopening the page. Use **Test alert** to check delivery. Permission, browser support, OS notification settings, and audio output can affect results.
+## Sound alerts — no installation
 
-Browser alerts run while this page stays open; background tabs can throttle checks. They do not run after the page is closed. Alert history is stored separately per browser to suppress repeated alerts for the same fixing. If storage is blocked, preferences and suppression last only for the current visit. Different devices have independent settings and alert history.
+1. Open **Alerts** in the top-right corner of the website.
+2. Choose the currencies you want to watch and press **Turn on sound alerts**. Five sample chimes confirm audio has started; adjust **Alert volume** or use **Play sample** as needed.
+3. Keep the page open and your device awake. When a rate qualifies, the page plays five chimes and displays the conversion. Optional desktop notifications ask for browser permission only when switched on.
 
-For Mac alerts while the webpage is closed, select the desired currencies and delivery options, then use **Download Mac alert settings** and import the file locally:
+Use **Pause all alerts** to stop both sound and desktop notifications. The header shows whether alerts are on, off, waiting for sound to resume, offline, or waiting for fresh data. Each currency has an independent alert switch; hiding a currency in Settings does not mute its alerts.
 
-```sh
-python3 monitor.py --import-settings ~/Downloads/cad-rate-monitor-settings.json
-```
+Preferences are saved in this browser. After reopening, click anywhere on the page to resume previously enabled audio, or use **Turn on sound alerts**. Browsers require user interaction to start audio. Closing the page stops alerts; sleeping devices, background throttling, muted tabs, and system audio settings can prevent delivery. This static site does not provide background push notifications. No Python installation is needed to use website alerts.
 
-The import validates and merges the file with existing Mac settings, preserving the custom sound path and alert history. It does not fetch rates or play an alert. The next Mac check uses the new settings. **Read Mac alerts aloud** controls speech in the exported file. The webpage’s volume slider controls browser audio; the Mac script uses the current system volume. Browser preferences never change the installed script automatically.
-
-You can also edit `notification_currencies`, `desktop_notifications`, `sound_enabled`, and `speak_alert` in local `config.json`. An empty notification list or all three delivery channels off disables alerts without consuming alert history. Existing configurations without these new fields retain their prior behaviour.
+With manual refresh selected, enabled alerts still check published rates every 15 minutes. Other refresh intervals apply as selected. Alert history is kept per browser to suppress duplicate alerts for the same fixing. If storage is blocked, preferences and suppression last for the current visit only. Different devices have independent settings and alert history.
 
 ## Favourable rate rules
 
@@ -47,9 +45,9 @@ With the default thresholds, a currency qualifies when its amount received per C
 - Within **0.5% of its best rate over the past 90 calendar days**, or
 - At least **2% above its preceding 30-calendar-day average**.
 
-These are comparisons with recent history, not a forecast. Rates over four calendar days old cannot trigger alerts. The script requires enough historical observations to assess each currency. Browser threshold changes update its badges and alerts; import the downloaded settings to apply them to the Mac script.
+These are comparisons with recent history, not a forecast. Rates over four calendar days old cannot trigger alerts. The script requires enough historical observations to assess each currency. Browser threshold changes update the website’s badges and alerts. The legacy Mac script has its own local configuration.
 
-## Mac sound alerts
+## Optional legacy Mac script (advanced)
 
 Requires macOS and Python 3.9 or newer. No third-party Python packages are needed.
 
@@ -62,7 +60,7 @@ python3 monitor.py --test-alert
 
 The installer copies default settings to `config.json` when missing and creates a per-user login agent. It checks once per hour whether the weekday update is due, then fetches once after **2 PM Vancouver time**, independent of the Mac's current time zone. Failed checks retry on the next hourly run. The Mac must be on and signed in, with this folder's drive mounted and internet access available.
 
-When a rate qualifies, the script requests a desktop notification, plays **five pings**, and speaks the conversion. Your current volume/output device and macOS notification settings apply. Opening the website does not enable background audio alerts.
+When a rate qualifies, the script requests a desktop notification, plays **five pings**, and speaks the conversion. Your current volume/output device and macOS notification settings apply. This legacy script is independent of the website’s built-in sound alerts.
 
 Repeat alerts are suppressed for seven days per currency unless it improves another 1% since the last alert. The same published fixing never triggers a second alert. Customize the thresholds, sound, repeat interval, speech, and example amount in `config.json`.
 
