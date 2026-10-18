@@ -368,6 +368,7 @@ function initializeSettings() {
   $('history-range').value = settings.historyRange;
   $('history-page-size').value = settings.pageSize;
   window.refreshCustomDropdowns?.();
+  window.refreshCustomSteppers?.();
   $('rule-near-high').textContent = settings.nearHigh;
   $('rule-above-average').textContent = settings.aboveAverage;
   applyTheme(); applyPreferences(); scheduleRefresh(); alertStatus();

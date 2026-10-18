@@ -70,3 +70,21 @@
 :root[data-theme="dark"] .card-top .badge{background:#e1edf7;color:#17354a;border-color:#a5bed1}
 :root[data-theme="dark"] .card-top .badge.good{background:#b9ee95;color:#12381c;border-color:#8acb6b}
 @media(max-width:380px){.card-top{grid-template-columns:36px minmax(0,1fr) auto;column-gap:8px}.card-top .currency-icon{width:36px;height:36px;font-size:23px}.card-top h2{font-size:14px}.card-top .badge{font-size:12px;padding:7px 10px}}
+
+/* A shared control size and surface throughout Settings. */
+.settings-grid label:not(.setting-check){font-size:12px;font-weight:550;margin:16px 0 7px;color:var(--ink)}
+.settings-grid .site-select{width:100%}
+.settings-grid .site-select-trigger{height:44px;min-height:44px;background:var(--field);font-size:13px;font-weight:500;border-radius:9px}
+.settings-grid .site-select-trigger>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.number-stepper{display:flex;align-items:stretch;height:44px;width:100%;border:1px solid var(--line);border-radius:9px;background:var(--field);overflow:hidden;transition:border-color .15s}
+.number-stepper:hover{border-color:var(--accent)}
+.number-stepper:focus-within{outline:2px solid var(--accent);outline-offset:3px;border-color:var(--accent)}
+.settings-grid .number-stepper input[type="number"]{appearance:textfield;-moz-appearance:textfield;flex:1;width:0;min-width:0;height:42px;min-height:0;border:0;border-radius:0;outline:0;background:transparent;padding:8px;font-size:14px;line-height:1.4;text-align:center;font-variant-numeric:tabular-nums;box-shadow:none}
+.number-stepper input::-webkit-inner-spin-button,.number-stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.stepper-button{display:grid;place-items:center;flex:0 0 42px;border:0;background:var(--toggle-bg);color:var(--ink);font:500 20px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}
+.stepper-button:first-child{border-right:1px solid var(--line)}
+.stepper-button:last-child{border-left:1px solid var(--line)}
+.stepper-button:hover:not(:disabled){background:var(--button);color:var(--button-text)}
+.stepper-button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:8px}
+.stepper-button:disabled{opacity:.4;cursor:default}
+.settings-grid .secondary-button,#reset-settings{min-height:44px;padding:10px 14px;font-size:12px;border-radius:9px}

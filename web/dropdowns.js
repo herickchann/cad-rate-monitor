@@ -14,7 +14,9 @@
     widget.active = index;
     widget.items.forEach((item, i) => item.classList.toggle('is-active', i === index));
     widget.button.setAttribute('aria-activedescendant', widget.items[index].id);
-    widget.items[index].scrollIntoView({block:'nearest'});
+    const item = widget.items[index], top = item.offsetTop, bottom = top + item.offsetHeight;
+    if (top < widget.menu.scrollTop) widget.menu.scrollTop = top;
+    else if (bottom > widget.menu.scrollTop + widget.menu.clientHeight) widget.menu.scrollTop = bottom - widget.menu.clientHeight;
   }
   function sync(widget) {
     const selected = widget.select.selectedIndex;
@@ -37,7 +39,7 @@
     widget.select.dispatchEvent(new Event('change', {bubbles:true}));
     sync(widget); close(); widget.button.focus({preventScroll:true});
   }
-  for (const select of document.querySelectorAll('.history-filter select, .page-size-control select')) {
+  for (const select of document.querySelectorAll('.history-filter select, .page-size-control select, .settings-grid select')) {
     const wrapper = document.createElement('div'); wrapper.className = 'site-select';
     select.before(wrapper); wrapper.appendChild(select);
     const label = document.querySelector(`label[for="${select.id}"]`);
@@ -58,7 +60,12 @@
       item.addEventListener('click', () => choose(widget, index));
       menu.appendChild(item); return item;
     });
-    document.body.appendChild(menu);
+    const dialog = select.closest('dialog');
+    (dialog || document.body).appendChild(menu);
+    if (dialog) {
+      dialog.addEventListener('close', () => { if (opened?.menu === menu) close(); });
+      dialog.addEventListener('cancel', event => { if (opened?.menu === menu) { event.preventDefault(); close(); } });
+    }
     const widget = {select, button, value, menu, items, active:0}; widgets.push(widget);
     select.hidden = true;
     label.addEventListener('click', event => {event.preventDefault(); button.focus();});
