@@ -335,7 +335,7 @@ $('refresh-now').addEventListener('click', load);
 $('download-mac-settings').addEventListener('click', () => {
   const file = new Blob([JSON.stringify(RateAlerts.macSettings(settings), null, 2) + '\n'], { type: 'application/json' });
   const url = URL.createObjectURL(file), link = document.createElement('a');
-  link.href = url; link.download = 'cad-rate-monitor-settings.json'; document.body.appendChild(link); link.click(); link.remove();
+  link.href = url; link.download = 'cad-rate-monitor-settings.json'; ($('settings-dialog').open ? $('settings-dialog') : document.body).appendChild(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 $('reset-settings').addEventListener('click', () => {
@@ -347,3 +347,23 @@ preferenceNote(restored.canSave);
 initializeSettings();
 document.addEventListener('visibilitychange', () => { if (!document.hidden && settings.refreshMinutes) load(); });
 load();
+
+const settingsDialog = $('settings-dialog');
+function openSettings() {
+  if (!settingsDialog.open) settingsDialog.showModal();
+  document.body.classList.add('settings-open');
+  $('open-settings').setAttribute('aria-expanded', 'true');
+}
+$('open-settings').addEventListener('click', openSettings);
+$('empty-open-settings').addEventListener('click', openSettings);
+$('close-settings').addEventListener('click', () => settingsDialog.close());
+settingsDialog.addEventListener('close', () => {
+  document.body.classList.remove('settings-open');
+  $('open-settings').setAttribute('aria-expanded', 'false');
+  $('open-settings').focus();
+});
+settingsDialog.addEventListener('click', event => {
+  if (event.target !== settingsDialog) return;
+  const bounds = settingsDialog.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) settingsDialog.close();
+});

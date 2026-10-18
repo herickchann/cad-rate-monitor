@@ -14,11 +14,11 @@ The public site uses `config.example.json`. Local changes to `config.json` affec
 
 ## Currency switches
 
-Use **Your currencies** on the webpage to turn GBP, EUR, USD, and JPY on or off. This filters rate cards, chart tabs, converter results, and history columns. Choices and the selected chart currency are saved in local browser storage and restored after refresh or reopening. You can switch all currencies off. Preferences belong to this browser and are not synced to other devices or the Mac alert script. If storage is unavailable, switches work for the current visit and the page explains that choices cannot be saved.
+Open **Settings** in the top-right corner and use **Your currencies** to turn GBP, EUR, USD, and JPY on or off. This filters rate cards, chart tabs, converter results, and history columns. Choices and the selected chart currency are saved in local browser storage and restored after refresh or reopening. You can switch all currencies off. Preferences belong to this browser and are not synced to other devices or the Mac alert script. If storage is unavailable, switches work for the current visit and the page explains that choices cannot be saved.
 
 ## Settings and themes
 
-Open **Settings & notifications** for Forest light, Midnight dark, Ocean blue, or Match device themes; a saved default CAD amount; rate precision; refresh frequency; history visibility; and custom favourable-rate thresholds. Existing saved currency selections survive this update. Reset browser settings restores defaults without clearing alert history.
+Open the **Settings** panel from the top-right corner for Forest light, Midnight dark, Ocean blue, or Match device themes; a saved default CAD amount; rate precision; refresh frequency; history visibility; and custom favourable-rate thresholds. Existing saved currency selections survive this update. Reset browser settings restores defaults without clearing alert history.
 
 Each currency has an independent notification switch. Turning off a display switch only hides its dashboard content; it does not mute its notifications. Browser desktop notifications are off by default and request permission only when explicitly enabled. Sound is off by default, has its own volume control, and must be enabled by a click after reopening the page. Use **Test alert** to check delivery. Permission, browser support, OS notification settings, and audio output can affect results.
 
