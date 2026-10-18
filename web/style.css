@@ -58,3 +58,15 @@
 .site-select-option[aria-selected="true"]{font-weight:650;color:var(--accent)}
 .site-select-option[aria-selected="true"]::after{content:"✓";position:absolute;right:11px}
 @media(max-width:540px){.history-filter .site-select{flex:1;max-width:190px}.site-select-option{min-height:44px}}
+
+/* Keep the currency heading and prominent status aligned in one header. */
+.card-top{display:grid;grid-template-columns:41px minmax(0,1fr) auto;column-gap:10px;row-gap:3px;align-items:center}
+.card-top>.currency-icon{grid-column:1;grid-row:1/3;align-self:center}
+.card-top>div{display:contents}
+.card-top h2{grid-column:2;grid-row:1;min-width:0;line-height:1.3}
+.card-top p{grid-column:2/4;grid-row:2;margin:0;line-height:1.4;opacity:.9}
+.card-top .badge{grid-column:3;grid-row:1;justify-self:end;margin:0;display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:7px 12px;font-size:13px;line-height:1.2;font-weight:750;letter-spacing:.1px;opacity:1;background:#eef4fa;color:#17354a;border:1px solid #71889b;border-radius:999px}
+.card-top .badge.good{background:#155934;color:#fff;border-color:#0c4928;opacity:1}
+:root[data-theme="dark"] .card-top .badge{background:#e1edf7;color:#17354a;border-color:#a5bed1}
+:root[data-theme="dark"] .card-top .badge.good{background:#b9ee95;color:#12381c;border-color:#8acb6b}
+@media(max-width:380px){.card-top{grid-template-columns:36px minmax(0,1fr) auto;column-gap:8px}.card-top .currency-icon{width:36px;height:36px;font-size:23px}.card-top h2{font-size:14px}.card-top .badge{font-size:12px;padding:7px 10px}}
