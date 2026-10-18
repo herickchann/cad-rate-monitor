@@ -6,11 +6,12 @@ const CurrencyPreferences = (() => {
     return { theme: 'forest', amount: 1000, refreshMinutes: 15, showHistory: true, precision: 4,
       notifications: false, sound: false, volume: .5, notifyCurrencies: [...currencies],
       nearHigh: .5, aboveAverage: 2, reminderDays: 7, macSpeech: true,
-      chartRange: '3M', historyRange: '3M', pageSize: 10 };
+      cardOrder: [...currencies], chartRange: '3M', historyRange: '3M', pageSize: 10 };
   }
   function settings(value, currencies) {
     const base = defaultSettings(currencies), v = value && typeof value === 'object' ? value : {};
     return {
+      cardOrder: [...new Set([...(Array.isArray(v.cardOrder) ? v.cardOrder.filter(c => currencies.includes(c)) : []), ...currencies])],
       theme: ['forest', 'dark', 'ocean', 'system'].includes(v.theme) ? v.theme : base.theme,
       amount: number(v.amount, base.amount, 0, 1e9),
       refreshMinutes: [0, 5, 15, 30, 60].includes(v.refreshMinutes) ? v.refreshMinutes : base.refreshMinutes,

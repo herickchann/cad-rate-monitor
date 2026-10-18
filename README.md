@@ -16,6 +16,10 @@ The public site uses `config.example.json`. Local changes to `config.json` affec
 
 Open **Settings** in the top-right corner and use **Your currencies** to turn GBP, EUR, USD, and JPY on or off. This filters rate cards, chart tabs, converter results, and history columns. Choices and the selected chart currency are saved in local browser storage and restored after refresh or reopening. You can switch all currencies off. Preferences belong to this browser and are not synced to other devices or the Mac alert script. If storage is unavailable, switches work for the current visit and the page explains that choices cannot be saved.
 
+## Rearrange currency cards
+
+Drag a card by its **Move** handle to put it in a different position. On touchscreens, drag the same handle; the rest of the page scrolls normally. With a handle focused, arrow keys move the card earlier or later, and Home/End move it first or last. Escape cancels an active drag. Card order is saved with browser preferences and survives refreshes, hiding currencies, and reopening. Card colours stay with their currencies. Reset browser settings restores the default order.
+
 ## Chart ranges and table pagination
 
 The chart has **1W, 1M, 3M, 6M, YTD, 1Y, and All** controls. Its high, average, and percentage change summarize the selected period. The daily-history table has its own range selector and shows newest fixings first, with 10, 25, 50, or 100 rows per page and numbered Previous/Next navigation. Range and page-size choices are saved with browser preferences. Changing the table range or visible currencies returns the table to page one.

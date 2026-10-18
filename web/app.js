@@ -36,6 +36,7 @@ function applyPreferences() {
     document.querySelector(`[data-currency="${c}"]`).hidden = !visible;
     document.querySelector(`[data-result-currency="${c}"]`).hidden = !visible;
   }
+  applyCardOrder();
   document.querySelector('.rate-grid').dataset.count = String(enabled.length);
   $('empty-currencies').hidden = enabled.length > 0;
   for (const selector of ['.workspace', '.rate-note']) document.querySelector(selector).hidden = !enabled.length;
@@ -512,3 +513,94 @@ alertsDialog.addEventListener('click', event => {
   const bounds = alertsDialog.getBoundingClientRect();
   if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) alertsDialog.close();
 });
+
+function applyCardOrder() {
+  const grid = document.querySelector('.rate-grid');
+  for (const c of settings.cardOrder) grid.appendChild($('card-' + c));
+}
+function announceCardOrder(currency, saved) {
+  const visible = settings.cardOrder.filter(c => enabled.includes(c));
+  $('card-order-status').textContent = `${currencyNames[currency]} moved to position ${visible.indexOf(currency) + 1} of ${visible.length}. ${saved ? 'Order saved.' : 'Browser storage is unavailable; order applies to this visit only.'}`;
+}
+function moveCard(currency, target) {
+  const order = [...settings.cardOrder];
+  order.splice(order.indexOf(currency), 1);
+  order.splice(target, 0, currency);
+  settings.cardOrder = order;
+  applyCardOrder();
+}
+let cardDrag;
+for (const handle of document.querySelectorAll('[data-move]')) {
+  handle.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key) || cardDrag) return;
+    event.preventDefault();
+    const currency = handle.dataset.move;
+    const visible = settings.cardOrder.filter(c => enabled.includes(c));
+    const index = visible.indexOf(currency);
+    const destination = event.key === 'Home' ? 0 : event.key === 'End' ? visible.length - 1 : Math.max(0, Math.min(visible.length - 1, index + (['ArrowLeft','ArrowUp'].includes(event.key) ? -1 : 1)));
+    if (destination === index) return;
+    moveCard(currency, settings.cardOrder.indexOf(visible[destination]));
+    handle.focus({preventScroll:true});
+    const saved = CurrencyPreferences.save(preferenceStorage, enabled, selected, settings);
+    preferenceNote(saved); announceCardOrder(currency, saved);
+  });
+  handle.addEventListener('pointerdown', event => {
+    if (!event.isPrimary || event.button !== 0 || cardDrag) return;
+    const card = handle.closest('.rate-card');
+    cardDrag = {handle, card, currency:handle.dataset.move, pointer:event.pointerId, x:event.clientX, y:event.clientY, original:[...settings.cardOrder], started:false};
+    handle.setPointerCapture(event.pointerId);
+  });
+}
+window.addEventListener('pointermove', event => {
+  const drag = cardDrag;
+  if (!drag || drag.pointer !== event.pointerId) return;
+  if (!drag.started) {
+    if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6) return;
+    drag.started = true;
+    drag.card.classList.add('is-dragging'); document.body.classList.add('reordering-cards');
+  }
+  event.preventDefault();
+  drag.clientX = event.clientX; drag.clientY = event.clientY;
+  if (!drag.scrollFrame) drag.scrollFrame = requestAnimationFrame(scrollCardDrag);
+  updateCardDrag(event.clientX, event.clientY);
+}, {passive:false});
+function updateCardDrag(x, y) {
+  const drag = cardDrag;
+  if (!drag?.started) return;
+  const target = document.elementFromPoint(x, y)?.closest('.rate-card');
+  if (!target || target === drag.card || target.hidden || !target.closest('.rate-grid')) return;
+  const targetCurrency = target.id.slice(5);
+  const from = settings.cardOrder.indexOf(drag.currency), to = settings.cardOrder.indexOf(targetCurrency);
+  const bounds = target.getBoundingClientRect(), origin = drag.card.getBoundingClientRect();
+  const sameRow = Math.abs(bounds.top - origin.top) < bounds.height / 2;
+  const passedMiddle = sameRow ? x > bounds.left + bounds.width / 2 : y > bounds.top + bounds.height / 2;
+  if ((to > from && !passedMiddle) || (to < from && passedMiddle)) return;
+  moveCard(drag.currency, to);
+  drag.handle.setPointerCapture(drag.pointer);
+}
+function scrollCardDrag() {
+  const drag = cardDrag;
+  if (!drag?.started) return;
+  const edge = 65;
+  const amount = drag.clientY < edge ? -12 : drag.clientY > window.innerHeight - edge ? 12 : 0;
+  if (amount) { window.scrollBy(0, amount); updateCardDrag(drag.clientX, drag.clientY); }
+  drag.scrollFrame = requestAnimationFrame(scrollCardDrag);
+}
+function finishCardDrag(cancelled = false) {
+  const drag = cardDrag;
+  if (!drag) return;
+  cardDrag = null;
+  if (drag.scrollFrame) cancelAnimationFrame(drag.scrollFrame);
+  if (drag.handle.hasPointerCapture(drag.pointer)) drag.handle.releasePointerCapture(drag.pointer);
+  drag.card.classList.remove('is-dragging'); document.body.classList.remove('reordering-cards');
+  if (cancelled) { settings.cardOrder = drag.original; applyCardOrder(); }
+  else if (drag.started) {
+    const saved = CurrencyPreferences.save(preferenceStorage, enabled, selected, settings);
+    preferenceNote(saved); announceCardOrder(drag.currency, saved);
+  }
+  drag.handle.focus({preventScroll:true});
+}
+window.addEventListener('pointerup', event => { if (cardDrag?.pointer === event.pointerId) finishCardDrag(); });
+window.addEventListener('pointercancel', event => { if (cardDrag?.pointer === event.pointerId) finishCardDrag(true); });
+window.addEventListener('keydown', event => { if (event.key === 'Escape' && cardDrag) { event.preventDefault(); finishCardDrag(true); } });
+window.addEventListener('blur', () => { if (cardDrag) finishCardDrag(true); });
