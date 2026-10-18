@@ -89,11 +89,11 @@
 .stepper-button:disabled{opacity:.4;cursor:default}
 .settings-grid .secondary-button,#reset-settings{min-height:44px;padding:10px 14px;font-size:12px;border-radius:9px}
 
-/* CADar's original bird anchors the brand without crowding the dashboard. */
-.wordmark{gap:8px;font-size:24px;letter-spacing:-1px;line-height:1}
-.brand-mark{display:block;width:48px;height:48px;object-fit:contain;flex-shrink:0}
-.brand-mascot{display:block;width:112px;height:112px;object-fit:contain;flex-shrink:0;margin-right:6px}
-.update{align-items:center}
-.update .dot{margin-top:0;flex-shrink:0}
-@media(max-width:850px){.brand-mascot{width:88px;height:88px}.update{margin-top:20px}}
-@media(max-width:540px){.wordmark{font-size:23px}.brand-mark{width:44px;height:44px}.brand-mascot{width:80px;height:80px}.update{gap:8px;white-space:normal}}
+/* A quiet radar mark for the dashboard; the mascot lives in Settings. */
+.wordmark{gap:10px;font-size:24px;letter-spacing:-1px;line-height:1}
+.brand-mark{display:block;width:40px;height:40px;flex-shrink:0;border-radius:10px}
+.settings-brand{display:flex;align-items:center;gap:10px;margin-top:26px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted)}
+.settings-brand img{display:block;object-fit:contain;flex-shrink:0}
+.settings-brand strong{font-size:12px;font-weight:650;color:var(--ink)}
+.settings-brand p{font-size:11px;margin:2px 0 0}
+@media(max-width:540px){.wordmark{font-size:23px}.brand-mark{width:36px;height:36px;border-radius:9px}}

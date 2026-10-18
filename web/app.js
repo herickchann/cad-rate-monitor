@@ -329,7 +329,7 @@ function persistAlertHistory(history) {
 
 async function deliverAlert(body, tag) {
   return RateAlerts.deliver(settings, notificationPermission(), () => {
-    const notification = new Notification('CADar', { body, tag, icon: './cadar-mascot.png' });
+    const notification = new Notification('CADar', { body, tag, icon: './cadar-icon.png' });
     notification.onclick = () => { window.focus(); notification.close(); };
     notification.onerror = () => { $('alert-status').textContent = 'The browser could not display the desktop notification. Sound may still work.'; };
     return true;

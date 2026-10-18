@@ -2,7 +2,7 @@
 
 [Open the live tracker](https://herickchann.github.io/cad-rate-monitor/)
 
-**Your Canadian-dollar radar.** CADar uses the original bird mascot chosen for the app.
+**Your Canadian-dollar radar.** CADar uses a simple C-shaped radar icon. The original bird mascot appears quietly at the bottom of Settings.
 
 Track how many British pounds, euros, US dollars, and Japanese yen you can buy with Canadian dollars, using the Bank of Canada's daily average exchange rates. Includes a public dashboard, historical charts with selectable time ranges, an amount converter, and built-in browser sound alerts.
 
