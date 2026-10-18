@@ -35,14 +35,16 @@
 
 .alert-setup .button,.converter button.button{border:0;justify-content:center}.secondary-button:disabled{opacity:.45;cursor:default}.alerts-trigger[data-active="true"] .alerts-state{background:var(--button);color:var(--button-text)}
 
-.card-toolbar{display:flex;justify-content:flex-end;margin:-14px -14px 8px 0}
-.card-move{display:inline-flex;align-items:center;gap:4px;min-height:28px;border:1px solid transparent;border-radius:6px;padding:4px 7px;background:transparent;color:inherit;font-size:10px;line-height:1;cursor:grab;touch-action:none;opacity:.8}
+.rate-card{position:relative}
+.card-toolbar{position:absolute;right:12px;bottom:64px;z-index:2}
+.rate-card .daily{padding-right:36px}
+.card-move{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid transparent;border-radius:6px;padding:4px 7px;background:transparent;color:inherit;font-size:10px;line-height:1;cursor:grab;touch-action:none;opacity:.8}
 .card-move:hover,.card-move:focus-visible{opacity:1;border-color:currentColor}
 .card-move:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .card-move svg{flex-shrink:0}
 .rate-card.is-dragging{opacity:.55;outline:2px dashed var(--accent);outline-offset:3px}
 .reordering-cards,.reordering-cards .card-move{cursor:grabbing;user-select:none;-webkit-user-select:none}
-@media(pointer:coarse){.card-move{min-height:40px;min-width:68px}.card-toolbar{margin-top:-12px}}
+@media(pointer:coarse){.card-move{width:44px;height:44px}.card-toolbar{right:6px;bottom:57px}.rate-card .daily{padding-right:44px}}
 
 .site-select{position:relative;min-width:0}
 .site-select-trigger{display:flex;align-items:center;justify-content:space-between;gap:20px;width:100%;min-height:38px;padding:8px 13px;border:1px solid var(--line);border-radius:9px;background:var(--toggle-bg);color:var(--ink);font:600 12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;text-align:left}
