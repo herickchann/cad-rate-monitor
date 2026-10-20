@@ -10,7 +10,7 @@ Higher foreign currency received per CAD is better. Published rates are indicati
 
 ## Website updates
 
-GitHub Actions builds and publishes the site on pushes to `main`, on manual runs, and hourly from **9:15 AM to 5:15 PM America/Vancouver, every day**. Scheduled runs can be delayed. Holidays retain the last available fixing. The webpage polls its published data every 15 minutes by default while open; users can change the interval or choose manual refresh.
+GitHub Actions builds and publishes the site on pushes to `main`, on manual runs, and every **30 minutes from 9:00 AM to 5:30 PM America/Vancouver, every day**. Scheduled runs can be delayed. Holidays retain the last available fixing. Bank of Canada reference rates update once per business day (by about 1:30 PM Vancouver); denser publishes mainly refresh VBCE cash quotes and pick up that daily fixing sooner. The webpage reloads the latest published snapshot every 15 minutes by default while open; Refresh and the chosen interval reload that snapshot — they do not call the Bank of Canada live. Users can change the interval or choose manual refresh.
 
 The public site uses `config.example.json`. Local changes to `config.json` affect only your Mac alerts. Site generation reads Bank of Canada history and the public cash feed used by VBCE’s travel-rate page and publishes only dashboard assets and rate data; local alert history, logs, generated reports, and machine-specific configuration are ignored by Git.
 

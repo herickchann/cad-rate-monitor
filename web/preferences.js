@@ -3,7 +3,7 @@ const CurrencyPreferences = (() => {
   const key = 'cad-rate-monitor.preferences.v1';
   const number = (value, fallback, min, max) => typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max ? value : fallback;
   function defaultSettings(currencies) {
-    return { source: 'boc', vbceTargets: {}, theme: 'forest', amount: 1000, refreshMinutes: 15, showHistory: true, precision: 4,
+    return { source: 'boc', vbceTargets: Object.fromEntries(currencies.map(c => [c, 0])), theme: 'forest', amount: 1000, refreshMinutes: 15, showHistory: true, precision: 4,
       notifications: false, sound: false, volume: .5, notifyCurrencies: [...currencies],
       nearHigh: .5, aboveAverage: 2, reminderDays: 7, macSpeech: true,
       cardOrder: [...currencies], chartRange: '3M', historyRange: '3M', pageSize: 10 };

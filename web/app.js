@@ -12,6 +12,7 @@ const preferenceStorage = {
 const restored = CurrencyPreferences.read(preferenceStorage, currencies);
 let data, enabled = restored.enabled, selected = restored.selected, settings = restored.settings;
 let refreshTimer, audioContext, checkingAlerts = false, loading = false;
+let lastCheckedAt = null;
 let historyPage = 1;
 let soundQueueUntil = 0, resumingSound = false;
 const soundNodes = new Set();
@@ -65,6 +66,18 @@ function cashGood(currency, rate) {
   return cashFresh(rate) && target > 0 && rate.rate >= target;
 }
 const quoteTime = value => new Intl.DateTimeFormat('en-CA', {dateStyle:'medium', timeStyle:'short', timeZone:'America/Vancouver'}).format(new Date(value));
+
+function vancouverCalendar() {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Vancouver', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+  const weekdayName = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Vancouver', weekday: 'short'
+  }).format(new Date());
+  const weekday = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[weekdayName];
+  // Unknown weekday → treat as Sunday so we never false-alarm “waiting”.
+  return { today, weekday: Number.isInteger(weekday) ? weekday : 0 };
+}
 
 function convert() {
   if (!data) return;
@@ -202,12 +215,21 @@ function renderHistory() {
 
 function render() {
   const cash = settings.source === 'vbce';
-  const dates = [...new Set(Object.values(data.rates).map(r => r.date))];
+  const dates = [...new Set(Object.values(data.rates).map(r => r.date))].sort();
+  const latestRateDate = dates.at(-1);
   const quotes = enabled.map(cashRate).filter(Boolean);
+  const published = 'Published · ' + quoteTime(data.updated_at) + ' Vancouver';
+  const { today, weekday } = vancouverCalendar();
+  const waiting = !cash && RateDates.waitingForTodaysBocFixing(latestRateDate, today, weekday);
   $('source-title').textContent = cash ? 'VBCE travel-cash estimates' : 'Bank of Canada daily rates';
   $('rate-date').textContent = cash
     ? (quotes.length ? 'Quoted · ' + [...new Set(quotes.map(r => quoteTime(r.updated_at)))].join(' / ') + ' Vancouver' : 'Cash quotes currently unavailable')
-    : 'Rate date · ' + dates.map(dayLabel).join(' / ');
+    : (waiting
+      ? 'Waiting for today’s Bank of Canada fixing · last rate date ' + dates.map(dayLabel).join(' / ')
+      : 'Rate date · ' + dates.map(dayLabel).join(' / '));
+  const publishEl = $('publish-date');
+  publishEl.hidden = false;
+  publishEl.textContent = published;
   $('source-description').textContent = cash
     ? 'CAD → foreign cash · VBCE sells · Cards and converter use this source.'
     : 'Daily market reference · Cards and converter use this source.';
@@ -246,28 +268,49 @@ function render() {
   }
   renderHistory();
   $('built-at').textContent = 'Last published · ' + quoteTime(data.updated_at) + ' Vancouver time';
+  $('checked-at').textContent = lastCheckedAt
+    ? 'Last checked on this device · ' + quoteTime(lastCheckedAt) + ' Vancouver time'
+    : '';
   convert(); chart();
 }
 
-async function load() {
+async function load(options = {}) {
   if (loading) return;
   loading = true;
+  const button = $('refresh-now');
+  const manual = options.manual === true;
+  if (manual && button) {
+    button.disabled = true;
+    button.textContent = 'Refreshing…';
+  }
   try {
-    const response = await fetch('./data.json', { cache: 'no-store' });
+    const response = await fetch('./data.json?t=' + Date.now(), { cache: 'no-store' });
     if (!response.ok) throw new Error('Rates unavailable');
     const next = await response.json();
     if (next.schema_version !== 1 || currencies.some(c => !next.rates?.[c]?.history?.length)) throw new Error('Invalid data');
-    data = next; render(); await checkAlerts();
+    data = next;
+    lastCheckedAt = Date.now();
+    render();
+    await checkAlerts();
   } catch (error) {
     $('notice').hidden = false;
-    $('notice').textContent = data ? 'Could not refresh the page. The last loaded rates remain visible; check their date before converting.' : 'Rates could not be loaded. Please refresh the page or use the official rate source below.';
+    $('notice').textContent = data ? 'Could not refresh published rates. The last loaded rates remain visible; check their date before converting.' : 'Rates could not be loaded. Please refresh the page or use the official rate source below.';
     if (!data) {
       $('rate-date').textContent = 'Rate data currently unavailable';
+      $('publish-date').hidden = true;
+      $('checked-at').textContent = '';
       for (const c of currencies) $('status-' + c).textContent = 'Unavailable';
       $('chart-summary').textContent = 'Rate history is unavailable.';
       $('history-body').replaceChildren();
     }
-  } finally { loading = false; alertStatus(); }
+  } finally {
+    loading = false;
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Refresh now';
+    }
+    alertStatus();
+  }
 }
 
 function applyTheme() {
@@ -513,7 +556,7 @@ $('pause-alerts').addEventListener('click', () => {
   settings.sound = false; settings.notifications = false; stopSound();
   changedSettings();
 });
-$('refresh-now').addEventListener('click', load);
+$('refresh-now').addEventListener('click', () => load({ manual: true }));
 $('reset-settings').addEventListener('click', () => {
   enabled = [...currencies]; selected = currencies[0]; settings = CurrencyPreferences.defaultSettings(currencies); historyPage = 1;
   $('alert-banner').hidden = true; stopSound(); changedSettings();
